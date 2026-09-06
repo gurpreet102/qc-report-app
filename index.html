@@ -785,8 +785,56 @@ function generateReport() {
     report += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
 
     const notOkCards = document.querySelectorAll('.check-card[data-status="Not OK"]');
+    const allCards = document.querySelectorAll('.check-card');
     const exceptionsList = [];
 
+    // --- Build categorizedIssues array for admin.html ---
+    const categorizedMap = {};
+
+    allCards.forEach(card => {
+        const cat = card.getAttribute('data-cat') || 'General';
+        const text = card.getAttribute('data-text');
+        const status = card.getAttribute('data-status');
+        const remarkArea = card.querySelector('textarea');
+        const remark = remarkArea ? remarkArea.value.trim() : '';
+
+        if (!categorizedMap[cat]) {
+            categorizedMap[cat] = {
+                category: cat,
+                status: 'CLEAN',
+                issueCount: 0,
+                items: [],
+                remarks: []
+            };
+        }
+
+        if (status === 'Not OK') {
+            categorizedMap[cat].status = 'ISSUES';
+            categorizedMap[cat].issueCount += 1;
+            if (text) categorizedMap[cat].items.push(text);
+
+            exceptionsList.push({
+                category: cat,
+                item: text,
+                remark: remark
+            });
+        }
+
+        if (remark && !categorizedMap[cat].remarks.includes(remark)) {
+            categorizedMap[cat].remarks.push(remark);
+        }
+    });
+
+    // Format categorized array into structured output
+    const categorizedIssues = Object.values(categorizedMap).map(c => ({
+        category: c.category,
+        status: c.status,
+        issueCount: c.issueCount,
+        items: c.items,
+        remarks: c.remarks.join(' | ')
+    }));
+
+    // --- Construct Text Summary for Modal/WhatsApp ---
     if (notOkCards.length > 0) {
         report += `⚠️ *${currentLang === 'hi' ? 'ध्यान देने वाली बातें / कमियां' : 'EXCEPTIONS & REMARKS'} (${notOkCards.length}):*\n\n`;
 
@@ -795,12 +843,6 @@ function generateReport() {
             const cat = card.getAttribute('data-cat');
             const text = card.getAttribute('data-text');
             const remark = card.querySelector('textarea').value.trim();
-            
-            exceptionsList.push({
-                category: cat,
-                item: text,
-                remark: remark
-            });
 
             if (!grouped[cat]) grouped[cat] = [];
             grouped[cat].push({ text, remark });
@@ -820,6 +862,7 @@ function generateReport() {
             : `✅ *ALL CHECKED ITEMS COMPLIANT*\nNo exceptions or issues noted during this audit.\n`;
     }
 
+    // --- Save Payload to Firestore ---
     db.collection("reports").add({
         sewadarName: sewadar,
         canteenNumber: canteen,
@@ -827,6 +870,7 @@ function generateReport() {
         language: currentLang,
         exceptionsCount: notOkCards.length,
         exceptions: exceptionsList,
+        categorizedIssues: categorizedIssues, // 👈 New array added for dashboard parsing
         fullReportText: report,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
     })
