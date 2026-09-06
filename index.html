@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>QC Report</title>
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="QC Report">
+
+    <!-- Firebase SDKs (Compatibility Version) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+    <script>
+      // Replace these values with your actual project keys
+      const firebaseConfig = {
+        apiKey: "AIzaSyD1fZFNWY5hbsShHwhq1dWUYpYkizWwekc",
+    authDomain: "qc-report-app.firebaseapp.com",
+    projectId: "qc-report-app",
+    storageBucket: "qc-report-app.firebasestorage.app",
+    messagingSenderId: "983700095052",
+    appId: "1:983700095052:web:684d291d05d8d44573b4e9",
+      };
+
+      firebase.initializeApp(firebaseConfig);
+      const db = firebase.firestore();
+    </script>
+
+    <style>
+        :root {
+            --bg-body: #f8fafc;
+            --surface-card: #ffffff;
+            --primary: #1e293b;
+            --accent: #0284c7;
+            --border-color: #e2e8f0;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --text-muted: #64748b;
+            
+            --status-ok-bg: #dcfce7;
+            --status-ok-border: #16a34a;
+            --status-ok-text: #15803d;
+            
+            --status-notok-bg: #fee2e2;
+            --status-notok-border: #dc2626;
+            --status-notok-text: #b91c1c;
+
+            --wa-color: #25D366;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            padding-bottom: 110px;
+            padding-top: env(safe-area-inset-top);
+            min-height: 100vh;
+        }
+
+        header {
+            position: sticky;
+            top: 0;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border-color);
+            padding: 14px 20px;
+            text-align: center;
+            z-index: 100;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .header-title {
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+
+        .lang-switch {
+            display: inline-flex;
+            background: #f1f5f9;
+            padding: 3px;
+            border-radius: 20px;
+            border: 1px solid var(--border-color);
+        }
+
+        .lang-btn {
+            border: none;
+            background: transparent;
+            padding: 6px 16px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            border-radius: 16px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .lang-btn.active {
+            background: var(--surface-card);
+            color: var(--accent);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 16px;
+        }
+
+        .card {
+            background: var(--surface-card);
+            border-radius: 12px;
+            padding: 18px;
+            margin-bottom: 16px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+
+        @media (max-width: 600px) {
+            .grid-3 { grid-template-columns: 1fr; }
+        }
+
+        .meta-field label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+
+        .meta-field input {
+            width: 100%;
+            padding: 12px 14px;
+            background: #f8fafc;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 0.95rem;
+            color: var(--text-primary);
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .meta-field input:focus {
+            border-color: var(--accent);
+            background: #ffffff;
+        }
+
+        .meta-field input.input-error {
+            border-color: var(--status-notok-border) !important;
+            background-color: var(--status-notok-bg) !important;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 20px 4px 10px 4px;
+            padding-bottom: 6px;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .section-title {
+            font-size: 0.95rem;
+            font-weight: 800;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .section-badge {
+            font-size: 0.7rem;
+            padding: 2px 8px;
+            border-radius: 12px;
+            background: #e0f2fe;
+            color: var(--accent);
+            font-weight: 700;
+        }
+
+        .check-card {
+            background: var(--surface-card);
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 10px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+            transition: border-color 0.2s, background-color 0.2s;
+        }
+
+        .check-card.card-error {
+            border: 2px solid var(--status-notok-border) !important;
+            background-color: #fff5f5;
+        }
+
+        .check-title {
+            font-size: 0.95rem;
+            font-weight: 500;
+            line-height: 1.45;
+            margin-bottom: 12px;
+            color: var(--text-primary);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .status-btn {
+            flex: 1;
+            height: 48px;
+            border: 1px solid var(--border-color);
+            background-color: #f1f5f9;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .status-btn.selected-ok {
+            background-color: var(--status-ok-bg) !important;
+            color: var(--status-ok-text) !important;
+            border-color: var(--status-ok-border) !important;
+        }
+
+        .status-btn.selected-not-ok {
+            background-color: var(--status-notok-bg) !important;
+            color: var(--status-notok-text) !important;
+            border-color: var(--status-notok-border) !important;
+        }
+
+        .remarks-box {
+            display: none;
+            margin-top: 12px;
+        }
+
+        .remarks-box textarea {
+            width: 100%;
+            padding: 12px;
+            background: #f8fafc;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 0.85rem;
+            color: var(--text-primary);
+            resize: vertical;
+            min-height: 65px;
+            outline: none;
+        }
+
+        .remarks-box textarea.input-error {
+            border-color: var(--status-notok-border) !important;
+            background-color: var(--status-notok-bg) !important;
+        }
+
+        .remarks-box textarea:focus {
+            border-color: var(--status-notok-border);
+            background: #ffffff;
+        }
+
+        .footer-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding: 14px 16px env(safe-area-inset-bottom) 16px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: center;
+            z-index: 999;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+        }
+
+        .action-btn {
+            width: 100%;
+            max-width: 760px;
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 16px;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+
+        .modal {
+            background: var(--surface-card);
+            border-radius: 12px;
+            width: 100%;
+            max-width: 600px;
+            max-height: 85vh;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        .modal-header {
+            padding: 16px 20px;
+            font-weight: 700;
+            font-size: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-primary);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-body {
+            padding: 18px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 0.85rem;
+            background: #f8fafc;
+            color: var(--text-primary);
+            line-height: 1.5;
+        }
+
+        .modal-footer {
+            padding: 14px 20px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .modal-btn-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .modal-btn {
+            flex: 1;
+            padding: 12px;
+            border-radius: 8px;
+            border: none;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 0.88rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .btn-share-native { background: var(--accent); color: white; }
+        .btn-share-wa { background: var(--wa-color); color: white; }
+        .btn-copy { background: #64748b; color: white; }
+        .btn-close { background: #e2e8f0; color: var(--text-primary); }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-title" id="ui-app-title">QC Report</div>
+    <div class="lang-switch">
+        <button type="button" class="lang-btn active" id="btn-lang-en" onclick="switchLanguage('en')">English</button>
+        <button type="button" class="lang-btn" id="btn-lang-hi" onclick="switchLanguage('hi')">हिन्दी</button>
+    </div>
+</header>
+
+<div class="container">
+
+    <div class="card">
+        <div class="grid-3">
+            <div class="meta-field">
+                <label id="ui-lbl-sewadar">Sewadar Name *</label>
+                <input type="text" id="sewadar_name" placeholder="...">
+            </div>
+            <div class="meta-field">
+                <label id="ui-lbl-canteen">Canteen Number *</label>
+                <input type="text" id="canteen_location" placeholder="...">
+            </div>
+            <div class="meta-field">
+                <label id="ui-lbl-dic">DIC Name *</label>
+                <input type="text" id="dic_name" placeholder="...">
+            </div>
+        </div>
+    </div>
+
+    <div id="checklist-root"></div>
+
+</div>
+
+<div class="footer-bar">
+    <button type="button" class="action-btn" id="generate-btn">Generate Report</button>
+</div>
+
+<div class="modal-overlay" id="modal">
+    <div class="modal">
+        <div class="modal-header">
+            <span id="ui-modal-title">Report Summary</span>
+            <span style="font-size:0.75rem; color:var(--text-muted);" id="report-timestamp"></span>
+        </div>
+        <div class="modal-body" id="report-text"></div>
+        <div class="modal-footer">
+            <div class="modal-btn-row">
+                <button type="button" class="modal-btn btn-share-native" id="btn-share-native">📲 Share</button>
+                <button type="button" class="modal-btn btn-share-wa" id="btn-share-wa">💬 WhatsApp</button>
+            </div>
+            <div class="modal-btn-row">
+                <button type="button" class="modal-btn btn-copy" id="btn-copy">📋 Copy</button>
+                <button type="button" class="modal-btn btn-close" id="btn-close">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentLang = 'en';
+
+const UI_TEXT = {
+    en: {
+        title: "QC Report",
+        sewadarLabel: "Sewadar Name *",
+        sewadarPlaceholder: "Enter sewadar name",
+        canteenLabel: "Canteen Number *",
+        canteenPlaceholder: "Enter canteen number",
+        dicNameLabel: "DIC Name *",
+        dicNamePlaceholder: "Enter DIC name",
+        btnOk: "✓ OK",
+        btnNotOk: "✕ Not OK",
+        remarkPlaceholder: "Reason / Remarks / Suggestion...",
+        generateBtn: "Generate Report",
+        modalTitle: "Report Summary",
+        btnShare: "📲 Share",
+        btnWA: "💬 WhatsApp",
+        btnCopy: "📋 Copy",
+        btnClose: "Close",
+        itemsLabel: "Items"
+    },
+    hi: {
+        title: "QC रिपोर्ट",
+        sewadarLabel: "सेवादार का नाम *",
+        sewadarPlaceholder: "सेवादार का नाम लिखें",
+        canteenLabel: "कैंटीन नंबर *",
+        canteenPlaceholder: "कैंटीन नंबर लिखें",
+        dicNameLabel: "डीआईसी का नाम *",
+        dicNamePlaceholder: "डीआईसी का नाम लिखें",
+        btnOk: "✓ सब ठीक है",
+        btnNotOk: "✕ ठीक नहीं है",
+        remarkPlaceholder: "क्या कमी है या क्या सुधार चाहिए लिखें...",
+        generateBtn: "रिपोर्ट बनाएं",
+        modalTitle: "रिपोर्ट की जानकारी",
+        btnShare: "📲 शेयर करें",
+        btnWA: "💬 व्हाट्सएप करें",
+        btnCopy: "📋 कॉपी करें",
+        btnClose: "बंद करें",
+        itemsLabel: "बातें"
+    }
+};
+
+const AUDIT_DATA = [
+    {
+        category: { en: "Counters", hi: "काउंटर (Counters)" },
+        items: [
+            { en: "Maintain cleanliness at the counters.", hi: "काउंटर पर सफाई रखें।" },
+            { en: "Ensure all sewadars wear headcovers, aprons, and gloves.", hi: "सभी सेवादार सिर का कपड़ा, एप्रन और दस्ताने पहनें।" },
+            { en: "Keep counters free of surplus coupons.", hi: "काउंटर पर अतिरिक्त कूपन न जमा न होने दें।" },
+            { en: "Ensure coupons are torn properly.", hi: "कूपन सही तरीके से फाड़े जाएं।" },
+            { en: "Maintain courteous and respectful behavior toward the sangat.", hi: "संगत के साथ प्यार और आदर से बात करें।" },
+            { en: "Serve well-cooked puris, discard any oily, undercooked/overcooked.", hi: "अच्छी पकी हुई पूरी दें, ज्यादा तेल वाली, कच्ची या जली हुई हटा दें।" }
+        ]
+    },
+    {
+        category: { en: "Washing Area", hi: "बर्तन धुलाई की जगह (Washing Area)" },
+        items: [
+            { en: "Soap Stain on utensils.", hi: "बर्तनों पर साबुन का दाग न रहे।" },
+            { en: "Ensure all utensils are fully dried before reuse.", hi: "दोबारा इस्तेमाल से पहले बर्तन पूरी तरह सूखे हों।" },
+            { en: "Ensure proper cleanliness and hygiene around and behind the utensil washing station.", hi: "बर्तन धोने वाली जगह के आसपास और पीछे अच्छी सफाई रखें।" }
+        ]
+    },
+    {
+        category: { en: "Eating Area", hi: "खाने की जगह (Eating Area)" },
+        items: [
+            { en: "Maintain orderly line management for smooth crowd flow.", hi: "भीड़ न हो, इसके लिए लाइन सही बनवाएं।" },
+            { en: "Ensure adequate supply and availability of extra utensils.", hi: "जरूरत के हिसाब से एक्स्ट्रा बर्तन मौजूद रहें।" },
+            { en: "Keep water tanks and drinking glasses covered at all times.", hi: "पानी की टंकी और गिलास हमेशा ढके रहें।" },
+            { en: "Keep all tables wiped and clean.", hi: "सभी tables पोंछकर साफ रखें।" },
+            { en: "Ensure seating mats are available and neatly arranged.", hi: "बैठने की चटाइयां साफ और सही बिछी हों।" },
+            { en: "Verify that signboards are accurately positioned at their respective counters.", hi: "साइनबोर्ड अपने सही काउंटर पर लगे हों।" },
+            { en: "Maintain overall cleanliness throughout the eating area.", hi: "पूरे ईटिंग एरिया में अच्छी सफाई रखें।" },
+            { en: "Collect taste feedback from the sangat.", hi: "संगत से खाने के स्वाद के बारे में पूछें।" },
+            { en: "Gather general suggestions and feedback from the sangat.", hi: "संगत से सुझाव और प्रतिक्रिया जानें।" },
+            { en: "Used bartan movement should be quiet and prompt.", hi: "इस्तेमाल किए हुए बर्तन जल्दी और बिना शोर के हटाएं।" }
+        ]
+    },
+    {
+        category: { en: "Pre Cooking", hi: "खाना बनाने की तैयारी (Pre Cooking)" },
+        items: [
+            { en: "Keep food preparation and cutting tables thoroughly sanitized.", hi: "सब्जी काटने और तैयारी वाली मेज पूरी तरह साफ रखें।" },
+            { en: "Ensure knives, peelers, and prep tools are washed before use.", hi: "चाकू, छिलनी और सामान इस्तेमाल से पहले धो लें।" },
+            { en: "Clean and sanitize mixers and grinders after each use.", hi: "मिक्सर-ग्राइंडर इस्तेमाल के बाद तुरंत साफ करें।" },
+            { en: "Regularly inspect and monitor deep freezer for cleanliness.", hi: "डीप फ्रीजर की सफाई रोज चेक करें।" },
+            { en: "Raw Vegetable inspection and quality control.", hi: "कच्ची सब्जियों की जांच करें कि वे ठीक हैं या नहीं।" },
+            { en: "Ensure all pre-cooking sewadars wear head covers.", hi: "तैयारी करने वाले सभी सेवादार सिर ढककर रखें।" }
+        ]
+    },
+    {
+        category: { en: "Floor & Canteen Area", hi: "फर्श और कैंटीन (Floor & Canteen)" },
+        items: [
+            { en: "Keep floors clean and well-maintained.", hi: "फर्श एकदम साफ रखें।" },
+            { en: "Wipe up any spills immediately to prevent hazards.", hi: "कुछ भी गिरने पर तुरंत पोंछें ताकि कोई फिसले नहीं।" },
+            { en: "Ensure ceiling fans are dust-free and clean.", hi: "छत के पंखे साफ हों, धूल न जमी हो।" },
+            { en: "Turn off lights and fans when areas are not in use to conserve energy.", hi: "जरूरत न होने पर लाइट और पंखे बंद रखें।" },
+            { en: "Maintain adequate and proper lighting throughout the space.", hi: "हर जगह सही रोशनी बनी रहे।" },
+            { en: "Proper shoes must be worn in the cooking and canteen premises.", hi: "कुकिंग एरिया और कैंटीन में सही जूते पहनकर रहें।" },
+            { en: "Observe any hindrance in general movement caused due to layout problem.", hi: "चेक करें कि किसी सामान की वजह से रास्ते में आने-जाने में दिक्कत तो नहीं हो रही।" }
+        ]
+    },
+    {
+        category: { en: "General Instructions", hi: "जरूरी बातें (General Instructions)" },
+        items: [
+            { en: "Avoid casual chit chat while performing sewa.", hi: "सेवा के दौरान आपस में अनावश्यक बातचीत न करें।" },
+            { en: "Do not wear aprons outside the canteen area.", hi: "कैंटीन से बाहर एप्रन पहनकर न जाएं।" },
+            { en: "Limited usage of mobile phone during sewa.", hi: "सेवा के दौरान मोबाइल का इस्तेमाल कम से कम करें।" },
+            { en: "Inspect accommodation and washroom areas for cleanliness and hygiene.", hi: "रहने की जगह और टॉयलेट की सफाई चेक करें।" },
+            { en: "Conduct routine cleanliness checks on deep freezers, and verify that all cold storage items are properly labeled with date tag.", hi: "फ्रीजर की सफाई देखें और रखे सामान पर तारीख का टैग चेक करें।" }
+        ]
+    },
+    {
+        category: { en: "Store", hi: "स्टोर (Store)" },
+        items: [
+            { en: "Inspect all spices (masalas) and pulses for pests or contamination.", hi: "मसाले और दालें चेक करें कि उनमें कीड़े या गंदगी न हो।" },
+            { en: "Store dry items properly to prevent dampness during humid weather.", hi: "सूखा सामान सही से रखें ताकि सीलन न लगे।" }
+        ]
+    },
+    {
+        category: { en: "Safety", hi: "सुरक्षा (Safety)" },
+        items: [
+            { en: "Ensure there are no exposed electrical joints or loose wiring.", hi: "खुले या ढीले बिजली के तार न हों।" },
+            { en: "Keep all gears and moving machinery parts fully covered and guarded.", hi: "मशीनों के चलने वाले हिस्से पूरी तरह ढके हों।" },
+            { en: "Ensure staircase have adequate lighting and visible glow stickers/photoluminescent markings.", hi: "सीढ़ियों पर सही रोशनी और चमकने वाले स्टिकर हों।" },
+            { en: "Keep stairways free of oil and water spills to prevent slips.", hi: "सीढ़ियों पर तेल या पानी न गिरा हो।" }
+        ]
+    },
+    {
+        category: { en: "Taste Feedback", hi: "खाने का स्वाद (Taste Feedback)" },
+        items: [
+            { en: "Tea (Meethi)", hi: "चाय (मीठी)" },
+            { en: "Tea (Feeki)", hi: "चाय (फीकी)" },
+            { en: "Milk (Meethi)", hi: "दूध (मीठा)" },
+            { en: "Milk (Feeki)", hi: "दूध (फीका)" },
+            { en: "Poha", hi: "पोहा" },
+            { en: "Upma", hi: "उपमा" },
+            { en: "Daliya", hi: "दलिया" },
+            { en: "Puri", hi: "पूरी" },
+            { en: "Subji", hi: "सब्जी" },
+            { en: "Idli", hi: "इडली" },
+            { en: "Sambar", hi: "सांभर" },
+            { en: "Chutney", hi: "चटनी" },
+            { en: "Fruit", hi: "फल" }
+        ]
+    }
+];
+
+document.addEventListener('DOMContentLoaded', () => {
+    renderChecklist();
+    setupEventListeners();
+});
+
+function switchLanguage(lang) {
+    currentLang = lang;
+    
+    document.getElementById('btn-lang-en').classList.toggle('active', lang === 'en');
+    document.getElementById('btn-lang-hi').classList.toggle('active', lang === 'hi');
+
+    document.getElementById('ui-app-title').innerText = UI_TEXT[lang].title;
+    document.getElementById('ui-lbl-sewadar').innerText = UI_TEXT[lang].sewadarLabel;
+    document.getElementById('sewadar_name').placeholder = UI_TEXT[lang].sewadarPlaceholder;
+    document.getElementById('ui-lbl-canteen').innerText = UI_TEXT[lang].canteenLabel;
+    document.getElementById('canteen_location').placeholder = UI_TEXT[lang].canteenPlaceholder;
+    document.getElementById('ui-lbl-dic').innerText = UI_TEXT[lang].dicNameLabel;
+    document.getElementById('dic_name').placeholder = UI_TEXT[lang].dicNamePlaceholder;
+
+    document.getElementById('generate-btn').innerText = UI_TEXT[lang].generateBtn;
+    document.getElementById('ui-modal-title').innerText = UI_TEXT[lang].modalTitle;
+    document.getElementById('btn-share-native').innerText = UI_TEXT[lang].btnShare;
+    document.getElementById('btn-share-wa').innerText = UI_TEXT[lang].btnWA;
+    document.getElementById('btn-copy').innerText = UI_TEXT[lang].btnCopy;
+    document.getElementById('btn-close').innerText = UI_TEXT[lang].btnClose;
+
+    renderChecklist();
+}
+
+function renderChecklist() {
+    const root = document.getElementById('checklist-root');
+    let html = '';
+
+    const currentSelections = {};
+    const currentRemarks = {};
+    document.querySelectorAll('.check-card').forEach(card => {
+        const id = card.id;
+        const status = card.getAttribute('data-status');
+        if (status) currentSelections[id] = status;
+        const remark = card.querySelector('textarea')?.value;
+        if (remark) currentRemarks[id] = remark;
+    });
+
+    AUDIT_DATA.forEach((sec, sIdx) => {
+        const catTitle = sec.category[currentLang];
+        html += `
+            <div class="section-header">
+                <span class="section-title">${catTitle}</span>
+                <span class="section-badge">${sec.items.length} ${UI_TEXT[currentLang].itemsLabel}</span>
+            </div>
+        `;
+
+        sec.items.forEach((itemObj, iIdx) => {
+            const uniqueId = `item_${sIdx}_${iIdx}`;
+            const itemText = itemObj[currentLang];
+            const itemTextEn = itemObj.en;
+            const catEn = sec.category.en;
+
+            html += `
+                <div class="check-card" id="${uniqueId}" data-cat-en="${catEn}" data-text-en="${itemTextEn}" data-cat="${catTitle}" data-text="${itemText}">
+                    <div class="check-title">${itemText}</div>
+                    <div class="btn-group">
+                        <button type="button" class="status-btn btn-ok" onclick="setStatus('${uniqueId}', 'OK')">${UI_TEXT[currentLang].btnOk}</button>
+                        <button type="button" class="status-btn btn-notok" onclick="setStatus('${uniqueId}', 'Not OK')">${UI_TEXT[currentLang].btnNotOk}</button>
+                    </div>
+                    <div class="remarks-box">
+                        <textarea placeholder="${UI_TEXT[currentLang].remarkPlaceholder}"></textarea>
+                    </div>
+                </div>
+            `;
+        });
+    });
+
+    root.innerHTML = html;
+
+    for (const id in currentSelections) {
+        const card = document.getElementById(id);
+        if (card) {
+            setStatus(id, currentSelections[id]);
+            if (currentRemarks[id]) {
+                card.querySelector('textarea').value = currentRemarks[id];
+            }
+        }
+    }
+}
+
+function setStatus(cardId, status) {
+    const card = document.getElementById(cardId);
+    if (!card) return;
+
+    card.classList.remove('card-error');
+
+    const btnOk = card.querySelector('.btn-ok');
+    const btnNotOk = card.querySelector('.btn-notok');
+    const remarksBox = card.querySelector('.remarks-box');
+
+    const currentStatus = card.getAttribute('data-status');
+
+    if (status === 'OK') {
+        if (currentStatus === 'OK') {
+            card.removeAttribute('data-status');
+            btnOk.classList.remove('selected-ok');
+        } else {
+            card.setAttribute('data-status', 'OK');
+            btnOk.classList.add('selected-ok');
+            btnNotOk.classList.remove('selected-not-ok');
+            remarksBox.style.display = 'none';
+        }
+    } else if (status === 'Not OK') {
+        if (currentStatus === 'Not OK') {
+            card.removeAttribute('data-status');
+            btnNotOk.classList.remove('selected-not-ok');
+            remarksBox.style.display = 'none';
+        } else {
+            card.setAttribute('data-status', 'Not OK');
+            btnNotOk.classList.add('selected-not-ok');
+            btnOk.classList.remove('selected-ok');
+            remarksBox.style.display = 'block';
+        }
+    }
+}
+
+function validateForm() {
+    let isValid = true;
+    let firstErrorElement = null;
+
+    // 1. Validate Header Metadata
+    const sewadarEl = document.getElementById('sewadar_name');
+    const canteenEl = document.getElementById('canteen_location');
+    const dicEl = document.getElementById('dic_name');
+
+    [sewadarEl, canteenEl, dicEl].forEach(el => {
+        if (!el.value.trim()) {
+            el.classList.add('input-error');
+            isValid = false;
+            if (!firstErrorElement) firstErrorElement = el;
+        } else {
+            el.classList.remove('input-error');
+        }
+    });
+
+    // 2. Validate Checklist Selections & Remarks for Not OK items
+    const allCards = document.querySelectorAll('.check-card');
+    allCards.forEach(card => {
+        const status = card.getAttribute('data-status');
+        const textarea = card.querySelector('textarea');
+        textarea.classList.remove('input-error');
+        card.classList.remove('card-error');
+
+        if (!status) {
+            card.classList.add('card-error');
+            isValid = false;
+            if (!firstErrorElement) firstErrorElement = card;
+        } else if (status === 'Not OK' && !textarea.value.trim()) {
+            textarea.classList.add('input-error');
+            card.classList.add('card-error');
+            isValid = false;
+            if (!firstErrorElement) firstErrorElement = textarea;
+        }
+    });
+
+    if (!isValid && firstErrorElement) {
+        firstErrorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const errorMsg = currentLang === 'hi' 
+            ? 'कृपया सभी आवश्यक फ़ील्ड भरें, सभी प्रश्नों के उत्तर दें और "ठीक नहीं है" वाले मदों के लिए विवरण लिखें।' 
+            : 'Please complete all header fields, make a selection for every checklist item, and provide remarks for items marked "Not OK".';
+        alert(errorMsg);
+    }
+
+    return isValid;
+}
+
+function generateReport() {
+    if (!validateForm()) return;
+
+    const sewadar = document.getElementById('sewadar_name').value.trim();
+    const canteen = document.getElementById('canteen_location').value.trim();
+    const dic = document.getElementById('dic_name').value.trim();
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+    let report = `📋 *QC REPORT*\n`;
+    report += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    report += `👤 *${currentLang === 'hi' ? 'सेवादार का नाम' : 'Sewadar Name'}:* ${sewadar}\n`;
+    report += `🏬 *${currentLang === 'hi' ? 'कैंटीन नंबर' : 'Canteen Number'}:* ${canteen}\n`;
+    report += `👔 *${currentLang === 'hi' ? 'डीआईसी का नाम' : 'DIC Name'}:* ${dic}\n`;
+    report += `📅 *${currentLang === 'hi' ? 'तारीख' : 'Date'}:* ${dateStr}\n`;
+    report += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+
+    const notOkCards = document.querySelectorAll('.check-card[data-status="Not OK"]');
+    const exceptionsList = [];
+
+    if (notOkCards.length > 0) {
+        report += `⚠️ *${currentLang === 'hi' ? 'ध्यान देने वाली बातें / कमियां' : 'EXCEPTIONS & REMARKS'} (${notOkCards.length}):*\n\n`;
+
+        const grouped = {};
+        notOkCards.forEach(card => {
+            const cat = card.getAttribute('data-cat');
+            const text = card.getAttribute('data-text');
+            const remark = card.querySelector('textarea').value.trim();
+            
+            exceptionsList.push({
+                category: cat,
+                item: text,
+                remark: remark
+            });
+
+            if (!grouped[cat]) grouped[cat] = [];
+            grouped[cat].push({ text, remark });
+        });
+
+        for (const cat in grouped) {
+            report += `📌 *${cat.toUpperCase()}*\n`;
+            grouped[cat].forEach(item => {
+                report += ` ❌ ${item.text}\n`;
+                report += `    ┗ 💬 _${currentLang === 'hi' ? 'विवरण' : 'Remark'}:_ ${item.remark}\n`;
+            });
+            report += `\n`;
+        }
+    } else {
+        report += currentLang === 'hi' 
+            ? `✅ *सब कुछ ठीक पाया गया*\nकोई कमी या समस्या दर्ज नहीं की गई है।\n`
+            : `✅ *ALL CHECKED ITEMS COMPLIANT*\nNo exceptions or issues noted during this audit.\n`;
+    }
+
+    db.collection("reports").add({
+        sewadarName: sewadar,
+        canteenNumber: canteen,
+        dicName: dic,
+        language: currentLang,
+        exceptionsCount: notOkCards.length,
+        exceptions: exceptionsList,
+        fullReportText: report,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    })
+    .then((docRef) => {
+        console.log("Report saved successfully with ID:", docRef.id);
+    })
+    .catch((error) => {
+        console.error("Error saving report to Firestore:", error);
+    });
+
+    document.getElementById('report-timestamp').innerText = dateStr;
+    document.getElementById('report-text').innerText = report;
+    document.getElementById('modal').style.display = 'flex';
+}
+
+function setupEventListeners() {
+    document.getElementById('generate-btn').addEventListener('click', generateReport);
+    document.getElementById('btn-close').addEventListener('click', () => {
+        document.getElementById('modal').style.display = 'none';
+    });
+    
+    document.getElementById('btn-copy').addEventListener('click', () => {
+        const text = document.getElementById('report-text').innerText;
+        navigator.clipboard.writeText(text).then(() => alert('रिपोर्ट कॉपी हो गई है!'));
+    });
+
+    document.getElementById('btn-share-wa').addEventListener('click', () => {
+        const text = document.getElementById('report-text').innerText;
+        window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
+    });
+
+    document.getElementById('btn-share-native').addEventListener('click', () => {
+        const text = document.getElementById('report-text').innerText;
+        if (navigator.share) {
+            navigator.share({ title: 'QC Report', text: text }).catch(() => {});
+        } else {
+            window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
+        }
+    });
+
+    ['sewadar_name', 'canteen_location', 'dic_name'].forEach(id => {
+        document.getElementById(id).addEventListener('input', (e) => {
+            if (e.target.value.trim()) e.target.classList.remove('input-error');
+        });
+    });
+}
+</script>
+</body>
+</html>
