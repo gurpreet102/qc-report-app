@@ -455,7 +455,7 @@
             </div>
             <div class="meta-field">
                 <label id="ui-lbl-canteen">Canteen Number *</label>
-                <input type="text" id="canteen_location" placeholder="...">
+                <input type="text" id="canteen_location" inputmode="numeric" pattern="[0-9]*" placeholder="e.g. 1">
             </div>
             <div class="meta-field">
                 <label id="ui-lbl-dic">DIC Name *</label>
@@ -506,7 +506,7 @@ const UI_TEXT = {
         sewadarLabel: "Sewadar Name *",
         sewadarPlaceholder: "Enter sewadar name",
         canteenLabel: "Canteen Number *",
-        canteenPlaceholder: "Enter canteen number",
+        canteenPlaceholder: "e.g. 1",
         dicNameLabel: "DIC Name *",
         dicNamePlaceholder: "Enter DIC name",
         btnOk: "✓ OK",
@@ -528,7 +528,7 @@ const UI_TEXT = {
         sewadarLabel: "सेवादार का नाम *",
         sewadarPlaceholder: "सेवादार का नाम लिखें",
         canteenLabel: "कैंटीन नंबर *",
-        canteenPlaceholder: "कैंटीन नंबर लिखें",
+        canteenPlaceholder: "उदा. 1",
         dicNameLabel: "डीआईसी का नाम *",
         dicNamePlaceholder: "डीआईसी का नाम लिखें",
         btnOk: "✓ सब ठीक है",
@@ -832,7 +832,8 @@ function generateReport() {
     if (!validateForm()) return;
 
     const sewadar = document.getElementById('sewadar_name').value.trim();
-    const canteen = document.getElementById('canteen_location').value.trim();
+    const canteenRaw = document.getElementById('canteen_location').value.trim();
+    const canteen = `C-${canteenRaw}`;
     const dic = document.getElementById('dic_name').value.trim();
     const generalFeedback = document.getElementById('general_feedback').value.trim();
     
@@ -929,7 +930,7 @@ function generateReport() {
     } else {
         report += currentLang === 'hi' 
             ? `✅ *सब कुछ ठीक पाया गया*\nकोई कमी या समस्या दर्ज नहीं की गई है।\n\n`
-            : `✅ *ALL CHECKED ITEMS COMPLIANT*\nNo exceptions or issues noted during this audit.\n\n`;
+            : `✅ *ALL CHECKED ITEMS COMPLIANT*\nNo exceptions or issues noted during Quality Check Sewa.\n\n`;
     }
 
     if (generalFeedback) {
@@ -988,7 +989,14 @@ function setupEventListeners() {
         }
     });
 
-    ['sewadar_name', 'canteen_location', 'dic_name'].forEach(id => {
+    // Enforce strictly digits for Canteen Number input
+    const canteenInput = document.getElementById('canteen_location');
+    canteenInput.addEventListener('input', (e) => {
+        e.target.value = e.target.value.replace(/\D/g, '');
+        if (e.target.value.trim()) e.target.classList.remove('input-error');
+    });
+
+    ['sewadar_name', 'dic_name'].forEach(id => {
         document.getElementById(id).addEventListener('input', (e) => {
             if (e.target.value.trim()) e.target.classList.remove('input-error');
         });
