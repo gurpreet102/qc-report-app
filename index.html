@@ -17,11 +17,11 @@
       // Replace these values with your actual project keys
       const firebaseConfig = {
         apiKey: "AIzaSyD1fZFNWY5hbsShHwhq1dWUYpYkizWwekc",
-    authDomain: "qc-report-app.firebaseapp.com",
-    projectId: "qc-report-app",
-    storageBucket: "qc-report-app.firebasestorage.app",
-    messagingSenderId: "983700095052",
-    appId: "1:983700095052:web:684d291d05d8d44573b4e9",
+        authDomain: "qc-report-app.firebaseapp.com",
+        projectId: "qc-report-app",
+        storageBucket: "qc-report-app.firebasestorage.app",
+        messagingSenderId: "983700095052",
+        appId: "1:983700095052:web:684d291d05d8d44573b4e9",
       };
 
       firebase.initializeApp(firebaseConfig);
@@ -46,6 +46,10 @@
             --status-notok-bg: #fee2e2;
             --status-notok-border: #dc2626;
             --status-notok-text: #b91c1c;
+
+            --status-na-bg: #e2e8f0;
+            --status-na-border: #64748b;
+            --status-na-text: #334155;
 
             --wa-color: #25D366;
         }
@@ -221,7 +225,7 @@
 
         .btn-group {
             display: flex;
-            gap: 10px;
+            gap: 8px;
         }
 
         .status-btn {
@@ -230,7 +234,7 @@
             border: 1px solid var(--border-color);
             background-color: #f1f5f9;
             border-radius: 8px;
-            font-size: 0.9rem;
+            font-size: 0.8rem;
             font-weight: 700;
             color: var(--text-secondary);
             cursor: pointer;
@@ -238,7 +242,9 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 6px;
+            gap: 4px;
+            padding: 0 4px;
+            text-align: center;
         }
 
         .status-btn.selected-ok {
@@ -251,6 +257,13 @@
             background-color: var(--status-notok-bg) !important;
             color: var(--status-notok-text) !important;
             border-color: var(--status-notok-border) !important;
+        }
+
+        .status-btn.selected-na {
+            background-color: var(--status-na-bg) !important;
+            color: var(--status-na-text) !important;
+            border-color: var(--status-na-border) !important;
+            box-shadow: inset 0 0 0 1px var(--status-na-border);
         }
 
         .remarks-box {
@@ -279,6 +292,38 @@
         .remarks-box textarea:focus {
             border-color: var(--status-notok-border);
             background: #ffffff;
+        }
+
+        .general-feedback-box {
+            margin-top: 20px;
+        }
+
+        .general-feedback-box label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .general-feedback-box textarea {
+            width: 100%;
+            padding: 14px;
+            background: var(--surface-card);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            font-size: 0.9rem;
+            color: var(--text-primary);
+            resize: vertical;
+            min-height: 90px;
+            outline: none;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .general-feedback-box textarea:focus {
+            border-color: var(--accent);
         }
 
         .footer-bar {
@@ -421,6 +466,11 @@
 
     <div id="checklist-root"></div>
 
+    <div class="card general-feedback-box">
+        <label id="ui-lbl-general-feedback">Feedback / Suggestion / Observation</label>
+        <textarea id="general_feedback" placeholder="..."></textarea>
+    </div>
+
 </div>
 
 <div class="footer-bar">
@@ -461,7 +511,10 @@ const UI_TEXT = {
         dicNamePlaceholder: "Enter DIC name",
         btnOk: "✓ OK",
         btnNotOk: "✕ Not OK",
+        btnNa: "Not Available",
         remarkPlaceholder: "Reason / Remarks / Suggestion...",
+        generalFeedbackLabel: "Feedback / Suggestion / Observation",
+        generalFeedbackPlaceholder: "Enter any general feedback, observations, or suggestions (Optional)",
         generateBtn: "Generate Report",
         modalTitle: "Report Summary",
         btnShare: "📲 Share",
@@ -480,7 +533,10 @@ const UI_TEXT = {
         dicNamePlaceholder: "डीआईसी का नाम लिखें",
         btnOk: "✓ सब ठीक है",
         btnNotOk: "✕ ठीक नहीं है",
+        btnNa: "उपलब्ध नहीं",
         remarkPlaceholder: "क्या कमी है या क्या सुधार चाहिए लिखें...",
+        generalFeedbackLabel: "सुझाव / टिप्पणी / अवलोकन",
+        generalFeedbackPlaceholder: "कोई सामान्य सुझाव या टिप्पणी लिखें (वैकल्पिक)",
         generateBtn: "रिपोर्ट बनाएं",
         modalTitle: "रिपोर्ट की जानकारी",
         btnShare: "📲 शेयर करें",
@@ -576,6 +632,7 @@ const AUDIT_DATA = [
         ]
     },
     {
+        isTasteCategory: true,
         category: { en: "Taste Feedback", hi: "खाने का स्वाद (Taste Feedback)" },
         items: [
             { en: "Tea (Meethi)", hi: "चाय (मीठी)" },
@@ -614,6 +671,9 @@ function switchLanguage(lang) {
     document.getElementById('ui-lbl-dic').innerText = UI_TEXT[lang].dicNameLabel;
     document.getElementById('dic_name').placeholder = UI_TEXT[lang].dicNamePlaceholder;
 
+    document.getElementById('ui-lbl-general-feedback').innerText = UI_TEXT[lang].generalFeedbackLabel;
+    document.getElementById('general_feedback').placeholder = UI_TEXT[lang].generalFeedbackPlaceholder;
+
     document.getElementById('generate-btn').innerText = UI_TEXT[lang].generateBtn;
     document.getElementById('ui-modal-title').innerText = UI_TEXT[lang].modalTitle;
     document.getElementById('btn-share-native').innerText = UI_TEXT[lang].btnShare;
@@ -640,6 +700,8 @@ function renderChecklist() {
 
     AUDIT_DATA.forEach((sec, sIdx) => {
         const catTitle = sec.category[currentLang];
+        const isTaste = !!sec.isTasteCategory;
+
         html += `
             <div class="section-header">
                 <span class="section-title">${catTitle}</span>
@@ -654,11 +716,12 @@ function renderChecklist() {
             const catEn = sec.category.en;
 
             html += `
-                <div class="check-card" id="${uniqueId}" data-cat-en="${catEn}" data-text-en="${itemTextEn}" data-cat="${catTitle}" data-text="${itemText}">
+                <div class="check-card" id="${uniqueId}" data-cat-en="${catEn}" data-text-en="${itemTextEn}" data-cat="${catTitle}" data-text="${itemText}" data-is-taste="${isTaste}">
                     <div class="check-title">${itemText}</div>
                     <div class="btn-group">
                         <button type="button" class="status-btn btn-ok" onclick="setStatus('${uniqueId}', 'OK')">${UI_TEXT[currentLang].btnOk}</button>
                         <button type="button" class="status-btn btn-notok" onclick="setStatus('${uniqueId}', 'Not OK')">${UI_TEXT[currentLang].btnNotOk}</button>
+                        ${isTaste ? `<button type="button" class="status-btn btn-na" onclick="setStatus('${uniqueId}', 'Not Available')">${UI_TEXT[currentLang].btnNa}</button>` : ''}
                     </div>
                     <div class="remarks-box">
                         <textarea placeholder="${UI_TEXT[currentLang].remarkPlaceholder}"></textarea>
@@ -675,7 +738,8 @@ function renderChecklist() {
         if (card) {
             setStatus(id, currentSelections[id]);
             if (currentRemarks[id]) {
-                card.querySelector('textarea').value = currentRemarks[id];
+                const ta = card.querySelector('textarea');
+                if (ta) ta.value = currentRemarks[id];
             }
         }
     }
@@ -689,31 +753,28 @@ function setStatus(cardId, status) {
 
     const btnOk = card.querySelector('.btn-ok');
     const btnNotOk = card.querySelector('.btn-notok');
+    const btnNa = card.querySelector('.btn-na');
     const remarksBox = card.querySelector('.remarks-box');
 
     const currentStatus = card.getAttribute('data-status');
 
-    if (status === 'OK') {
-        if (currentStatus === 'OK') {
-            card.removeAttribute('data-status');
-            btnOk.classList.remove('selected-ok');
-        } else {
-            card.setAttribute('data-status', 'OK');
-            btnOk.classList.add('selected-ok');
-            btnNotOk.classList.remove('selected-not-ok');
-            remarksBox.style.display = 'none';
-        }
-    } else if (status === 'Not OK') {
-        if (currentStatus === 'Not OK') {
-            card.removeAttribute('data-status');
-            btnNotOk.classList.remove('selected-not-ok');
-            remarksBox.style.display = 'none';
-        } else {
-            card.setAttribute('data-status', 'Not OK');
-            btnNotOk.classList.add('selected-not-ok');
-            btnOk.classList.remove('selected-ok');
-            remarksBox.style.display = 'block';
-        }
+    if (status === currentStatus) {
+        card.removeAttribute('data-status');
+        if (btnOk) btnOk.classList.remove('selected-ok');
+        if (btnNotOk) btnNotOk.classList.remove('selected-not-ok');
+        if (btnNa) btnNa.classList.remove('selected-na');
+        if (remarksBox) remarksBox.style.display = 'none';
+        return;
+    }
+
+    card.setAttribute('data-status', status);
+
+    if (btnOk) btnOk.classList.toggle('selected-ok', status === 'OK');
+    if (btnNotOk) btnNotOk.classList.toggle('selected-not-ok', status === 'Not OK');
+    if (btnNa) btnNa.classList.toggle('selected-na', status === 'Not Available');
+
+    if (remarksBox) {
+        remarksBox.style.display = (status === 'Not OK') ? 'block' : 'none';
     }
 }
 
@@ -741,14 +802,14 @@ function validateForm() {
     allCards.forEach(card => {
         const status = card.getAttribute('data-status');
         const textarea = card.querySelector('textarea');
-        textarea.classList.remove('input-error');
+        if (textarea) textarea.classList.remove('input-error');
         card.classList.remove('card-error');
 
         if (!status) {
             card.classList.add('card-error');
             isValid = false;
             if (!firstErrorElement) firstErrorElement = card;
-        } else if (status === 'Not OK' && !textarea.value.trim()) {
+        } else if (status === 'Not OK' && textarea && !textarea.value.trim()) {
             textarea.classList.add('input-error');
             card.classList.add('card-error');
             isValid = false;
@@ -773,6 +834,8 @@ function generateReport() {
     const sewadar = document.getElementById('sewadar_name').value.trim();
     const canteen = document.getElementById('canteen_location').value.trim();
     const dic = document.getElementById('dic_name').value.trim();
+    const generalFeedback = document.getElementById('general_feedback').value.trim();
+    
     const now = new Date();
     const dateStr = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
@@ -787,8 +850,9 @@ function generateReport() {
     const notOkCards = document.querySelectorAll('.check-card[data-status="Not OK"]');
     const allCards = document.querySelectorAll('.check-card');
     const exceptionsList = [];
+    const allResponsesList = [];
 
-    // --- Build categorizedIssues array for admin.html ---
+    // --- Build categorizedIssues array for admin dashboard ---
     const categorizedMap = {};
 
     allCards.forEach(card => {
@@ -797,6 +861,13 @@ function generateReport() {
         const status = card.getAttribute('data-status');
         const remarkArea = card.querySelector('textarea');
         const remark = remarkArea ? remarkArea.value.trim() : '';
+
+        allResponsesList.push({
+            category: cat,
+            item: text,
+            status: status,
+            remark: remark
+        });
 
         if (!categorizedMap[cat]) {
             categorizedMap[cat] = {
@@ -825,7 +896,6 @@ function generateReport() {
         }
     });
 
-    // Format categorized array into structured output
     const categorizedIssues = Object.values(categorizedMap).map(c => ({
         category: c.category,
         status: c.status,
@@ -852,14 +922,19 @@ function generateReport() {
             report += `📌 *${cat.toUpperCase()}*\n`;
             grouped[cat].forEach(item => {
                 report += ` ❌ ${item.text}\n`;
-                report += `    ┗ 💬 _${currentLang === 'hi' ? 'विवरण' : 'Remark'}:_ ${item.remark}\n`;
+                report += `    ➥ 💬 _${currentLang === 'hi' ? 'विवरण' : 'Remark'}:_ ${item.remark}\n`;
             });
             report += `\n`;
         }
     } else {
         report += currentLang === 'hi' 
-            ? `✅ *सब कुछ ठीक पाया गया*\nकोई कमी या समस्या दर्ज नहीं की गई है।\n`
-            : `✅ *ALL CHECKED ITEMS COMPLIANT*\nNo exceptions or issues noted during this audit.\n`;
+            ? `✅ *सब कुछ ठीक पाया गया*\nकोई कमी या समस्या दर्ज नहीं की गई है।\n\n`
+            : `✅ *ALL CHECKED ITEMS COMPLIANT*\nNo exceptions or issues noted during this audit.\n\n`;
+    }
+
+    if (generalFeedback) {
+        report += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+        report += `📝 *${currentLang === 'hi' ? 'सामान्य सुझाव / टिप्पणी' : 'GENERAL FEEDBACK / OBSERVATIONS'}:*\n${generalFeedback}\n\n`;
     }
 
     // --- Save Payload to Firestore ---
@@ -867,10 +942,12 @@ function generateReport() {
         sewadarName: sewadar,
         canteenNumber: canteen,
         dicName: dic,
+        generalFeedback: generalFeedback,
         language: currentLang,
         exceptionsCount: notOkCards.length,
         exceptions: exceptionsList,
-        categorizedIssues: categorizedIssues, // 👈 New array added for dashboard parsing
+        responses: allResponsesList,
+        categorizedIssues: categorizedIssues,
         fullReportText: report,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
     })
@@ -894,7 +971,7 @@ function setupEventListeners() {
     
     document.getElementById('btn-copy').addEventListener('click', () => {
         const text = document.getElementById('report-text').innerText;
-        navigator.clipboard.writeText(text).then(() => alert('रिपोर्ट कॉपी हो गई है!'));
+        navigator.clipboard.writeText(text).then(() => alert(currentLang === 'hi' ? 'रिपोर्ट कॉपी हो गई है!' : 'Report copied to clipboard!'));
     });
 
     document.getElementById('btn-share-wa').addEventListener('click', () => {
