@@ -615,6 +615,7 @@ const AUDIT_DATA = [
             { en: "Conduct routine cleanliness checks on deep freezers, and verify that all cold storage items are properly labeled with date tag.", hi: "फ्रीजर की सफाई देखें और रखे सामान पर तारीख का टैग चेक करें।" }
         ]
     },
+    /*
     {
         category: { en: "Store", hi: "स्टोर (Store)" },
         items: [
@@ -622,6 +623,7 @@ const AUDIT_DATA = [
             { en: "Store dry items properly to prevent dampness during humid weather.", hi: "सूखा सामान सही से रखें ताकि सीलन न लगे।" }
         ]
     },
+    */
     {
         category: { en: "Safety", hi: "सुरक्षा (Safety)" },
         items: [
@@ -930,7 +932,7 @@ function generateReport() {
     } else {
         report += currentLang === 'hi' 
             ? `✅ *सब कुछ ठीक पाया गया*\nकोई कमी या समस्या दर्ज नहीं की गई है।\n\n`
-            : `✅ *ALL CHECKED ITEMS COMPLIANT*\nNo exceptions or issues noted during Quality Check Sewa.\n\n`;
+            : `✅ *ALL CHECKED ITEMS COMPLIANT*\nNo exceptions or issues noted during this audit.\n\n`;
     }
 
     if (generalFeedback) {
