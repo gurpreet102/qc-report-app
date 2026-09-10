@@ -309,7 +309,6 @@
                 <canvas id="categoryChart"></canvas>
             </div>
         </div>
-        <!-- Replaced "Top Canteens" with "Day-Wise Exceptions" -->
         <div class="chart-card">
             <div class="chart-header">
                 <div class="chart-title">Day-Wise Exception Trend</div>
@@ -760,6 +759,7 @@ function viewReport(id) {
                 <div><strong>Date:</strong> ${report.createdAt ? new Date(report.createdAt.seconds * 1000).toLocaleString('en-GB') : 'N/A'}</div>
             </div>
         </div>
+        
         <h3 style="font-size: 0.95rem; font-weight:700; color: var(--primary); margin-bottom: 12px;">Categorized Analysis & Remarks</h3>
     `;
 
@@ -800,8 +800,26 @@ function viewReport(id) {
 
             html += `</div>`;
         });
-    } else {
-        html += `<pre style="white-space: pre-wrap; font-family: monospace; font-size: 0.85rem;">${report.fullReportText || "No structured breakdown available."}</pre>`;
+    }
+
+    // --- General Feedback Section ---
+    if (report.generalFeedback && report.generalFeedback.trim() !== '') {
+        html += `
+            <div style="background: #e0f2fe; border: 1px solid #bae6fd; border-radius: 8px; padding: 14px; margin-bottom: 16px;">
+                <strong style="font-size: 0.9rem; color: #0369a1; display: block; margin-bottom: 6px;">💬 Feedback / Suggestion / Observation</strong>
+                <div style="font-size: 0.85rem; color: #0f172a; white-space: pre-wrap;">${report.generalFeedback}</div>
+            </div>
+        `;
+    }
+
+    // --- Full Generated Report Text Section ---
+    if (report.fullReportText && report.fullReportText.trim() !== '') {
+        html += `
+            <div style="margin-top: 16px;">
+                <strong style="font-size: 0.9rem; color: var(--primary); display: block; margin-bottom: 8px;">📄 Full Text Report</strong>
+                <pre style="background: #ffffff; border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 0.8rem; white-space: pre-wrap; color: var(--text-main); overflow-x: auto;">${report.fullReportText}</pre>
+            </div>
+        `;
     }
 
     modalContent.innerHTML = html;
@@ -826,7 +844,7 @@ function exportToCSV() {
         return;
     }
 
-    const headers = ["Report ID", "Date & Time", "Canteen Number", "Sewadar Name", "DIC Name", "Exceptions Count", "Flagged Categories", "Category Remarks"];
+    const headers = ["Report ID", "Date & Time", "Canteen Number", "Sewadar Name", "DIC Name", "Exceptions Count", "Flagged Categories", "Category Remarks", "General Feedback"];
     const rows = currentFilteredData.map(r => {
         const dateFormatted = r.createdAt 
             ? `"${new Date(r.createdAt.seconds * 1000).toLocaleString('en-GB')}"` 
@@ -852,7 +870,8 @@ function exportToCSV() {
             `"${(r.dicName || '').replace(/"/g, '""')}"`,
             r.exceptionsCount || 0,
             `"${flaggedCats.replace(/"/g, '""')}"`,
-            `"${remarksSummary.replace(/"/g, '""')}"`
+            `"${remarksSummary.replace(/"/g, '""')}"`,
+            `"${(r.generalFeedback || '').replace(/"/g, '""')}"`
         ].join(",");
     });
 
