@@ -52,6 +52,8 @@
             --status-na-text: #334155;
 
             --wa-color: #25D366;
+            --draft-color: #64748b;
+            --new-audit-color: #16a34a;
         }
 
         * {
@@ -66,7 +68,7 @@
         body {
             background-color: var(--bg-body);
             color: var(--text-primary);
-            padding-bottom: 110px;
+            padding-bottom: 120px;
             padding-top: env(safe-area-inset-top);
             min-height: 100vh;
         }
@@ -169,6 +171,14 @@
             background: #ffffff;
         }
 
+        .meta-field input:disabled, 
+        .remarks-box textarea:disabled, 
+        .general-feedback-box textarea:disabled {
+            background-color: #f1f5f9 !important;
+            color: #94a3b8 !important;
+            cursor: not-allowed;
+        }
+
         .meta-field input.input-error {
             border-color: var(--status-notok-border) !important;
             background-color: var(--status-notok-bg) !important;
@@ -245,6 +255,11 @@
             gap: 4px;
             padding: 0 4px;
             text-align: center;
+        }
+
+        .status-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
         }
 
         .status-btn.selected-ok {
@@ -334,26 +349,54 @@
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
-            padding: 14px 16px env(safe-area-inset-bottom) 16px;
+            padding: 12px 16px env(safe-area-inset-bottom) 16px;
             border-top: 1px solid var(--border-color);
             display: flex;
-            justify-content: center;
+            flex-direction: column;
+            align-items: center;
             z-index: 999;
             box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
         }
 
-        .action-btn {
+        .footer-btn-container {
             width: 100%;
             max-width: 760px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .action-btn {
+            flex: 1;
             background: var(--accent);
             color: white;
             border: none;
-            padding: 16px;
+            padding: 14px;
             border-radius: 10px;
-            font-size: 1rem;
+            font-size: 0.95rem;
             font-weight: 700;
             cursor: pointer;
-            box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);
+            box-shadow: 0 4px 12px rgba(2, 132, 199, 0.2);
+            transition: all 0.2s ease;
+        }
+
+        .btn-draft {
+            background: var(--draft-color);
+            box-shadow: 0 4px 12px rgba(100, 116, 139, 0.2);
+        }
+
+        .btn-new-audit {
+            background: var(--new-audit-color);
+            box-shadow: 0 4px 12px rgba(22, 163, 74, 0.25);
+            display: none;
+        }
+
+        .draft-status-bar {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 6px;
+            height: 16px;
+            font-weight: 600;
+            text-align: center;
         }
 
         .modal-overlay {
@@ -474,7 +517,12 @@
 </div>
 
 <div class="footer-bar">
-    <button type="button" class="action-btn" id="generate-btn">Generate Report</button>
+    <div class="footer-btn-container">
+        <button type="button" class="action-btn btn-draft" id="draft-btn" onclick="manualSaveDraft()">💾 Save Draft</button>
+        <button type="button" class="action-btn" id="generate-btn">Generate Report</button>
+        <button type="button" class="action-btn btn-new-audit" id="new-audit-btn" onclick="startNewAudit()">➕ Start New Audit</button>
+    </div>
+    <div class="draft-status-bar" id="draft-status-msg"></div>
 </div>
 
 <div class="modal-overlay" id="modal">
@@ -499,6 +547,7 @@
 
 <script>
 let currentLang = 'en';
+const DRAFT_KEY = 'qc_audit_form_draft';
 
 const UI_TEXT = {
     en: {
@@ -516,12 +565,17 @@ const UI_TEXT = {
         generalFeedbackLabel: "Feedback / Suggestion / Observation",
         generalFeedbackPlaceholder: "Enter any general feedback, observations, or suggestions (Optional)",
         generateBtn: "Generate Report",
+        btnSaveDraft: "💾 Save Draft",
+        btnStartNew: "➕ Start New Audit",
         modalTitle: "Report Summary",
         btnShare: "📲 Share",
         btnWA: "💬 WhatsApp",
         btnCopy: "📋 Copy",
         btnClose: "Close",
-        itemsLabel: "Items"
+        itemsLabel: "Items",
+        draftSavedMsg: "Draft saved locally at ",
+        draftLoadedMsg: "Loaded saved draft",
+        formLockedMsg: "Report submitted! Form locked to prevent editing."
     },
     hi: {
         title: "QC रिपोर्ट",
@@ -538,12 +592,17 @@ const UI_TEXT = {
         generalFeedbackLabel: "सुझाव / टिप्पणी / अवलोकन",
         generalFeedbackPlaceholder: "कोई सामान्य सुझाव या टिप्पणी लिखें (वैकल्पिक)",
         generateBtn: "रिपोर्ट बनाएं",
+        btnSaveDraft: "💾 ड्राफ्ट सेव करें",
+        btnStartNew: "➕ नई ऑडिट शुरू करें",
         modalTitle: "रिपोर्ट की जानकारी",
         btnShare: "📲 शेयर करें",
         btnWA: "💬 व्हाट्सएप करें",
         btnCopy: "📋 कॉपी करें",
         btnClose: "बंद करें",
-        itemsLabel: "बातें"
+        itemsLabel: "बातें",
+        draftSavedMsg: "ड्राफ्ट सेव हुआ: ",
+        draftLoadedMsg: "सेव किया गया ड्राफ्ट लोड हुआ",
+        formLockedMsg: "रिपोर्ट सबमिट हो गई! फ़ॉर्म लॉक कर दिया गया है।"
     }
 };
 
@@ -615,15 +674,6 @@ const AUDIT_DATA = [
             { en: "Conduct routine cleanliness checks on deep freezers, and verify that all cold storage items are properly labeled with date tag.", hi: "फ्रीजर की सफाई देखें और रखे सामान पर तारीख का टैग चेक करें।" }
         ]
     },
-    /*
-    {
-        category: { en: "Store", hi: "स्टोर (Store)" },
-        items: [
-            { en: "Inspect all spices (masalas) and pulses for pests or contamination.", hi: "मसाले और दालें चेक करें कि उनमें कीड़े या गंदगी न हो।" },
-            { en: "Store dry items properly to prevent dampness during humid weather.", hi: "सूखा सामान सही से रखें ताकि सीलन न लगे।" }
-        ]
-    },
-    */
     {
         category: { en: "Safety", hi: "सुरक्षा (Safety)" },
         items: [
@@ -657,6 +707,8 @@ const AUDIT_DATA = [
 document.addEventListener('DOMContentLoaded', () => {
     renderChecklist();
     setupEventListeners();
+    loadDraft();
+    attachAutoSaveListeners();
 });
 
 function switchLanguage(lang) {
@@ -677,6 +729,8 @@ function switchLanguage(lang) {
     document.getElementById('general_feedback').placeholder = UI_TEXT[lang].generalFeedbackPlaceholder;
 
     document.getElementById('generate-btn').innerText = UI_TEXT[lang].generateBtn;
+    document.getElementById('draft-btn').innerText = UI_TEXT[lang].btnSaveDraft;
+    document.getElementById('new-audit-btn').innerText = UI_TEXT[lang].btnStartNew;
     document.getElementById('ui-modal-title').innerText = UI_TEXT[lang].modalTitle;
     document.getElementById('btn-share-native').innerText = UI_TEXT[lang].btnShare;
     document.getElementById('btn-share-wa').innerText = UI_TEXT[lang].btnWA;
@@ -684,6 +738,8 @@ function switchLanguage(lang) {
     document.getElementById('btn-close').innerText = UI_TEXT[lang].btnClose;
 
     renderChecklist();
+    loadDraft();
+    attachAutoSaveListeners();
 }
 
 function renderChecklist() {
@@ -751,6 +807,9 @@ function setStatus(cardId, status) {
     const card = document.getElementById(cardId);
     if (!card) return;
 
+    // Do not allow status changes if form is locked
+    if (card.getAttribute('data-locked') === 'true') return;
+
     card.classList.remove('card-error');
 
     const btnOk = card.querySelector('.btn-ok');
@@ -766,6 +825,7 @@ function setStatus(cardId, status) {
         if (btnNotOk) btnNotOk.classList.remove('selected-not-ok');
         if (btnNa) btnNa.classList.remove('selected-na');
         if (remarksBox) remarksBox.style.display = 'none';
+        saveDraft(true);
         return;
     }
 
@@ -778,13 +838,147 @@ function setStatus(cardId, status) {
     if (remarksBox) {
         remarksBox.style.display = (status === 'Not OK') ? 'block' : 'none';
     }
+
+    saveDraft(true);
+}
+
+// --- DRAFT MANAGEMENT SYSTEM ---
+
+function saveDraft(silent = true) {
+    const draftData = {
+        sewadar: document.getElementById('sewadar_name')?.value || '',
+        canteen: document.getElementById('canteen_location')?.value || '',
+        dic: document.getElementById('dic_name')?.value || '',
+        generalFeedback: document.getElementById('general_feedback')?.value || '',
+        selections: {},
+        remarks: {}
+    };
+
+    document.querySelectorAll('.check-card').forEach(card => {
+        const status = card.getAttribute('data-status');
+        if (status) draftData.selections[card.id] = status;
+
+        const remark = card.querySelector('textarea')?.value;
+        if (remark) draftData.remarks[card.id] = remark;
+    });
+
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(draftData));
+
+    if (!silent) {
+        const msgEl = document.getElementById('draft-status-msg');
+        msgEl.innerText = UI_TEXT[currentLang].draftSavedMsg + new Date().toLocaleTimeString();
+        setTimeout(() => { msgEl.innerText = ""; }, 3000);
+    }
+}
+
+function manualSaveDraft() {
+    saveDraft(false);
+}
+
+function loadDraft() {
+    const saved = localStorage.getItem(DRAFT_KEY);
+    if (!saved) return;
+
+    try {
+        const draft = JSON.parse(saved);
+
+        if (draft.sewadar) document.getElementById('sewadar_name').value = draft.sewadar;
+        if (draft.canteen) document.getElementById('canteen_location').value = draft.canteen;
+        if (draft.dic) document.getElementById('dic_name').value = draft.dic;
+        if (draft.generalFeedback) document.getElementById('general_feedback').value = draft.generalFeedback;
+
+        if (draft.selections) {
+            Object.keys(draft.selections).forEach(id => {
+                setStatus(id, draft.selections[id]);
+            });
+        }
+
+        if (draft.remarks) {
+            Object.keys(draft.remarks).forEach(id => {
+                const card = document.getElementById(id);
+                if (card) {
+                    const ta = card.querySelector('textarea');
+                    if (ta) ta.value = draft.remarks[id];
+                }
+            });
+        }
+    } catch (e) {
+        console.error("Failed loading draft:", e);
+    }
+}
+
+function attachAutoSaveListeners() {
+    ['sewadar_name', 'canteen_location', 'dic_name', 'general_feedback'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('input', () => saveDraft(true));
+        }
+    });
+
+    document.querySelectorAll('.check-card textarea').forEach(ta => {
+        ta.addEventListener('input', () => saveDraft(true));
+    });
+}
+
+// --- LOCK & RESET CONTROLS ---
+
+function lockForm(isLocked) {
+    const textInputs = document.querySelectorAll('input, textarea');
+    textInputs.forEach(el => { el.disabled = isLocked; });
+
+    const statusBtns = document.querySelectorAll('.status-btn');
+    statusBtns.forEach(btn => { btn.disabled = isLocked; });
+
+    document.querySelectorAll('.check-card').forEach(card => {
+        if (isLocked) {
+            card.setAttribute('data-locked', 'true');
+        } else {
+            card.removeAttribute('data-locked');
+        }
+    });
+
+    document.getElementById('draft-btn').style.display = isLocked ? 'none' : 'block';
+    document.getElementById('generate-btn').style.display = isLocked ? 'none' : 'block';
+    document.getElementById('new-audit-btn').style.display = isLocked ? 'block' : 'none';
+}
+
+function startNewAudit() {
+    localStorage.removeItem(DRAFT_KEY);
+
+    document.getElementById('sewadar_name').value = '';
+    document.getElementById('canteen_location').value = '';
+    document.getElementById('dic_name').value = '';
+    document.getElementById('general_feedback').value = '';
+
+    document.querySelectorAll('.check-card').forEach(card => {
+        card.removeAttribute('data-status');
+        card.classList.remove('card-error');
+
+        const btnOk = card.querySelector('.btn-ok');
+        const btnNotOk = card.querySelector('.btn-notok');
+        const btnNa = card.querySelector('.btn-na');
+        const remarksBox = card.querySelector('.remarks-box');
+        const ta = card.querySelector('textarea');
+
+        if (btnOk) btnOk.classList.remove('selected-ok');
+        if (btnNotOk) btnNotOk.classList.remove('selected-not-ok');
+        if (btnNa) btnNa.classList.remove('selected-na');
+        if (remarksBox) remarksBox.style.display = 'none';
+        if (ta) {
+            ta.value = '';
+            ta.classList.remove('input-error');
+        }
+    });
+
+    lockForm(false);
+    document.getElementById('draft-status-msg').innerText = '';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function validateForm() {
     let isValid = true;
     let firstErrorElement = null;
 
-    // 1. Validate Header Metadata
     const sewadarEl = document.getElementById('sewadar_name');
     const canteenEl = document.getElementById('canteen_location');
     const dicEl = document.getElementById('dic_name');
@@ -799,7 +993,6 @@ function validateForm() {
         }
     });
 
-    // 2. Validate Checklist Selections & Remarks for Not OK items
     const allCards = document.querySelectorAll('.check-card');
     allCards.forEach(card => {
         const status = card.getAttribute('data-status');
@@ -854,8 +1047,6 @@ function generateReport() {
     const allCards = document.querySelectorAll('.check-card');
     const exceptionsList = [];
     const allResponsesList = [];
-
-    // --- Build categorizedIssues array for admin dashboard ---
     const categorizedMap = {};
 
     allCards.forEach(card => {
@@ -907,7 +1098,6 @@ function generateReport() {
         remarks: c.remarks.join(' | ')
     }));
 
-    // --- Construct Text Summary for Modal/WhatsApp ---
     if (notOkCards.length > 0) {
         report += `⚠️ *${currentLang === 'hi' ? 'ध्यान देने वाली बातें / कमियां' : 'EXCEPTIONS & REMARKS'} (${notOkCards.length}):*\n\n`;
 
@@ -932,7 +1122,7 @@ function generateReport() {
     } else {
         report += currentLang === 'hi' 
             ? `✅ *सब कुछ ठीक पाया गया*\nकोई कमी या समस्या दर्ज नहीं की गई है।\n\n`
-            : `✅ *ALL CHECKED ITEMS COMPLIANT*\nNo exceptions or issues noted during Quality Check Sewa.\n\n`;
+            : `✅ *ALL CHECKED ITEMS COMPLIANT*\nNo exceptions or issues noted during this audit.\n\n`;
     }
 
     if (generalFeedback) {
@@ -940,7 +1130,7 @@ function generateReport() {
         report += `📝 *${currentLang === 'hi' ? 'सामान्य सुझाव / टिप्पणी' : 'GENERAL FEEDBACK / OBSERVATIONS'}:*\n${generalFeedback}\n\n`;
     }
 
-    // --- Save Payload to Firestore ---
+    // Save Payload to Firestore
     db.collection("reports").add({
         sewadarName: sewadar,
         canteenNumber: canteen,
@@ -960,6 +1150,13 @@ function generateReport() {
     .catch((error) => {
         console.error("Error saving report to Firestore:", error);
     });
+
+    // Clear saved local draft on successful submission
+    localStorage.removeItem(DRAFT_KEY);
+
+    // Lock form to prevent editing/resubmitting
+    lockForm(true);
+    document.getElementById('draft-status-msg').innerText = UI_TEXT[currentLang].formLockedMsg;
 
     document.getElementById('report-timestamp').innerText = dateStr;
     document.getElementById('report-text').innerText = report;
@@ -991,7 +1188,6 @@ function setupEventListeners() {
         }
     });
 
-    // Enforce strictly digits for Canteen Number input
     const canteenInput = document.getElementById('canteen_location');
     canteenInput.addEventListener('input', (e) => {
         e.target.value = e.target.value.replace(/\D/g, '');
