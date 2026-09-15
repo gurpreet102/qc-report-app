@@ -408,6 +408,69 @@ let pageSize = 10;
 let categoryChartInstance = null;
 let dayWiseChartInstance = null;
 
+// Category Normalization Map to unify Hindi / Bilingual string variants to standard English
+// Comprehensive Normalization Mapping (all lowercase keys for strict matching)
+
+const categoryMap = {
+    // Counters
+    "counters": "Counters",
+    "काउंटर": "Counters",
+
+    // Washing Area
+    "washing area": "Washing Area",
+    "बर्तन धुलाई की जगह": "Washing Area",
+
+    // Eating Area
+    "eating area": "Eating Area",
+    "खाने की जगह": "Eating Area",
+
+    // Pre Cooking
+    "pre cooking": "Pre Cooking",
+    "precooking": "Pre Cooking",
+    "खाना बनाने की तैयारी": "Pre Cooking",
+
+    // Floor & Canteen Area
+    "floor & canteen area": "Floor & Canteen Area",
+    "floor and canteen area": "Floor & Canteen Area",
+    "फर्श और कैंटीन": "Floor & Canteen Area",
+
+    // General Instructions
+    "general instructions": "General Instructions",
+    "जरूरी बातें": "General Instructions",
+
+    // Safety
+    "safety": "Safety",
+    "सुरक्षा": "Safety",
+
+    // Taste Feedback
+    "taste feedback": "Taste Feedback",
+    "खाने का स्वाद": "Taste Feedback"
+};
+
+function normalizeCategory(catStr) {
+    if (!catStr) return "Uncategorized";
+    
+    const trimmed = catStr.trim().toLowerCase();
+
+    // 1. Direct match check
+    if (categoryMap[trimmed]) {
+        return categoryMap[trimmed];
+    }
+
+    // 2. Keyword fallback checks (Handles bilingual combinations like "Washing Area / बर्तन धुलाई की जगह")
+    if (trimmed.includes("counter") || trimmed.includes("काउंटर")) return "Counters";
+    if (trimmed.includes("washing") || trimmed.includes("धुलाई")) return "Washing Area";
+    if (trimmed.includes("eating") || (trimmed.includes("खाने") && trimmed.includes("जगह"))) return "Eating Area";
+    if (trimmed.includes("pre cooking") || trimmed.includes("तैयारी")) return "Pre Cooking";
+    if (trimmed.includes("floor") || trimmed.includes("फर्श") || trimmed.includes("कैंटीन")) return "Floor & Canteen Area";
+    if (trimmed.includes("instructions") || trimmed.includes("जरूरी")) return "General Instructions";
+    if (trimmed.includes("safety") || trimmed.includes("सुरक्षा")) return "Safety";
+    if (trimmed.includes("taste") || trimmed.includes("स्वाद")) return "Taste Feedback";
+
+    // Fallback: return clean string if no rules match
+    return catStr.trim();
+}
+
 document.addEventListener('DOMContentLoaded', fetchReports);
 
 function fetchReports() {
@@ -437,7 +500,7 @@ function populateCategoryFilterDropdown() {
 
     allReports.forEach(r => {
         if (r.categorizedIssues) {
-            r.categorizedIssues.forEach(c => categoriesSet.add(c.category));
+            r.categorizedIssues.forEach(c => categoriesSet.add(normalizeCategory(c.category)));
         }
     });
 
@@ -454,14 +517,15 @@ function updateStatsAndVisuals(filteredData) {
     document.getElementById('stat-total').innerText = total;
     document.getElementById('stat-exceptions-count').innerText = totalExceptions;
 
-    // Calculate Category Aggregations
+    // Calculate Category Aggregations using Normalized Names
     const categoryCounts = {};
 
     filteredData.forEach(r => {
         if (r.categorizedIssues) {
             r.categorizedIssues.forEach(c => {
                 if (c.issueCount > 0) {
-                    categoryCounts[c.category] = (categoryCounts[c.category] || 0) + c.issueCount;
+                    const normCat = normalizeCategory(c.category);
+                    categoryCounts[normCat] = (categoryCounts[normCat] || 0) + c.issueCount;
                 }
             });
         }
@@ -653,7 +717,7 @@ function applyFilters() {
         let matchesCategory = true;
         if (selectedCategory !== 'ALL') {
             matchesCategory = r.categorizedIssues && r.categorizedIssues.some(
-                c => c.category === selectedCategory && c.issueCount > 0
+                c => normalizeCategory(c.category) === selectedCategory && c.issueCount > 0
             );
         }
 
@@ -723,9 +787,10 @@ function renderTable(data) {
         if (r.categorizedIssues && r.categorizedIssues.length > 0) {
             const failedCats = r.categorizedIssues.filter(c => c.issueCount > 0);
             if (failedCats.length > 0) {
-                categoryTags = failedCats.map(c => 
-                    `<span style="display:inline-block; margin:2px; padding:2px 6px; background:#fef3c7; color:#92400e; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;" onclick="filterByCategoryDirect('${c.category}')">${c.category} (${c.issueCount})</span>`
-                ).join(' ');
+                categoryTags = failedCats.map(c => {
+                    const normCat = normalizeCategory(c.category);
+                    return `<span style="display:inline-block; margin:2px; padding:2px 6px; background:#fef3c7; color:#92400e; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;" onclick="filterByCategoryDirect('${normCat}')">${normCat} (${c.issueCount})</span>`;
+                }).join(' ');
             }
         }
 
@@ -765,6 +830,7 @@ function viewReport(id) {
 
     if (report.categorizedIssues && report.categorizedIssues.length > 0) {
         report.categorizedIssues.forEach(sec => {
+            const normCategory = normalizeCategory(sec.category);
             const isClean = sec.issueCount === 0;
             const cardBg = isClean ? '#ffffff' : '#fff1f2';
             const cardBorder = isClean ? '#e2e8f0' : '#fecdd3';
@@ -775,7 +841,7 @@ function viewReport(id) {
             html += `
                 <div style="background: ${cardBg}; border: 1px solid ${cardBorder}; border-radius: 8px; padding: 14px; margin-bottom: 12px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
-                        <strong style="font-size: 0.9rem; color: #0f172a;">${sec.category}</strong>
+                        <strong style="font-size: 0.9rem; color: #0f172a;">${normCategory}</strong>
                         ${statusBadge}
                     </div>
             `;
@@ -855,10 +921,10 @@ function exportToCSV() {
 
         if (r.categorizedIssues) {
             const failed = r.categorizedIssues.filter(c => c.issueCount > 0);
-            flaggedCats = failed.map(c => `${c.category} (${c.issueCount})`).join("; ");
+            flaggedCats = failed.map(c => `${normalizeCategory(c.category)} (${c.issueCount})`).join("; ");
             remarksSummary = r.categorizedIssues
                 .filter(c => c.remarks)
-                .map(c => `${c.category}: ${c.remarks}`)
+                .map(c => `${normalizeCategory(c.category)}: ${c.remarks}`)
                 .join("; ");
         }
 
