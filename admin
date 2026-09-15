@@ -25,6 +25,13 @@
 
       firebase.initializeApp(firebaseConfig);
       const db = firebase.firestore();
+// Force long polling to bypass network firewall / WebSocket restrictions
+  db.settings({
+    experimentalForceLongPolling: true
+  });
+
+  // Enable persistence for instant loads
+  db.enablePersistence({ synchronizeTabs: true }).catch(() => {});
     </script>
 
     <style>
