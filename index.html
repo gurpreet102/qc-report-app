@@ -47,13 +47,14 @@
             --status-notok-border: #dc2626;
             --status-notok-text: #b91c1c;
 
-            /* Updated to Yellow Theme */
-			--status-na-bg: #fef9c3;
-			--status-na-border: #eab308;
-			--status-na-text: #854d0e;
+            /* Yellow Theme for NA */
+            --status-na-bg: #fef9c3;
+            --status-na-border: #eab308;
+            --status-na-text: #854d0e;
 
             --wa-color: #25D366;
             --draft-color: #64748b;
+            --clear-color: #dc2626;
             --new-audit-color: #16a34a;
         }
 
@@ -275,13 +276,12 @@
             border-color: var(--status-notok-border) !important;
         }
 
-        /* Updated Selected State for NA Button */
-    .status-btn.selected-na {
-        background-color: var(--status-na-bg) !important;
-        color: var(--status-na-text) !important;
-        border-color: var(--status-na-border) !important;
-        box-shadow: inset 0 0 0 1px var(--status-na-border);
-    }
+        .status-btn.selected-na {
+            background-color: var(--status-na-bg) !important;
+            color: var(--status-na-text) !important;
+            border-color: var(--status-na-border) !important;
+            box-shadow: inset 0 0 0 1px var(--status-na-border);
+        }
 
         .remarks-box {
             display: none;
@@ -364,26 +364,49 @@
             width: 100%;
             max-width: 760px;
             display: flex;
-            gap: 10px;
+            gap: 12px;
+        }
+
+        /* 50% Left Side */
+        .secondary-actions {
+            flex: 1 1 50%;
+            display: flex;
+            gap: 12px;
+        }
+
+        .secondary-actions .action-btn {
+            flex: 1;
+        }
+
+        /* 50% Right Side */
+        .btn-generate-wrapper {
+            flex: 1 1 50%;
+            display: flex;
         }
 
         .action-btn {
-            flex: 1;
+            width: 100%;
             background: var(--accent);
             color: white;
             border: none;
-            padding: 14px;
+            padding: 14px 8px;
             border-radius: 10px;
-            font-size: 0.95rem;
+            font-size: 0.88rem;
             font-weight: 700;
             cursor: pointer;
             box-shadow: 0 4px 12px rgba(2, 132, 199, 0.2);
             transition: all 0.2s ease;
+            white-space: nowrap;
         }
 
         .btn-draft {
             background: var(--draft-color);
             box-shadow: 0 4px 12px rgba(100, 116, 139, 0.2);
+        }
+
+        .btn-clear {
+            background: #ef4444;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
         }
 
         .btn-new-audit {
@@ -520,9 +543,17 @@
 
 <div class="footer-bar">
     <div class="footer-btn-container">
-        <button type="button" class="action-btn btn-draft" id="draft-btn" onclick="manualSaveDraft()">💾 Save Draft</button>
-        <button type="button" class="action-btn" id="generate-btn">Generate Report</button>
-        <button type="button" class="action-btn btn-new-audit" id="new-audit-btn" onclick="startNewAudit()">➕ Start New Audit</button>
+        <!-- 50% Left Side (Shared equally 25% / 25%) -->
+        <div class="secondary-actions" id="secondary-actions-group">
+            <button type="button" class="action-btn btn-draft" id="draft-btn" onclick="manualSaveDraft()">💾 Save Draft</button>
+            <button type="button" class="action-btn btn-clear" id="clear-btn" onclick="clearForm()">🗑️ Clear Form</button>
+        </div>
+
+        <!-- 50% Right Side -->
+        <div class="btn-generate-wrapper">
+            <button type="button" class="action-btn" id="generate-btn">Generate Report</button>
+            <button type="button" class="action-btn btn-new-audit" id="new-audit-btn" onclick="startNewAudit()">➕ Start New Audit</button>
+        </div>
     </div>
     <div class="draft-status-bar" id="draft-status-msg"></div>
 </div>
@@ -568,6 +599,7 @@ const UI_TEXT = {
         generalFeedbackPlaceholder: "Enter any general feedback, observations, or suggestions (Optional)",
         generateBtn: "Generate Report",
         btnSaveDraft: "💾 Save Draft",
+        btnClearForm: "🗑️ Clear Form",
         btnStartNew: "➕ Start New Audit",
         modalTitle: "Report Summary",
         btnShare: "📲 Share",
@@ -577,6 +609,8 @@ const UI_TEXT = {
         itemsLabel: "Items",
         draftSavedMsg: "Draft saved locally at ",
         draftLoadedMsg: "Loaded saved draft",
+        clearConfirmMsg: "Are you sure you want to clear all form fields and saved draft data?",
+        formClearedMsg: "Form cleared completely",
         formLockedMsg: "Report submitted! Form locked to prevent editing."
     },
     hi: {
@@ -595,6 +629,7 @@ const UI_TEXT = {
         generalFeedbackPlaceholder: "कोई सामान्य सुझाव या टिप्पणी लिखें (वैकल्पिक)",
         generateBtn: "रिपोर्ट बनाएं",
         btnSaveDraft: "💾 ड्राफ्ट सेव करें",
+        btnClearForm: "🗑️ फ़ॉर्म रीसेट करें",
         btnStartNew: "➕ नई ऑडिट शुरू करें",
         modalTitle: "रिपोर्ट की जानकारी",
         btnShare: "📲 शेयर करें",
@@ -604,6 +639,8 @@ const UI_TEXT = {
         itemsLabel: "बातें",
         draftSavedMsg: "ड्राफ्ट सेव हुआ: ",
         draftLoadedMsg: "सेव किया गया ड्राफ्ट लोड हुआ",
+        clearConfirmMsg: "क्या आप वाकई सारा फ़ॉर्म और सेव किया गया ड्राफ्ट खाली करना चाहते हैं?",
+        formClearedMsg: "फ़ॉर्म पूरी तरह खाली कर दिया गया है",
         formLockedMsg: "रिपोर्ट सबमिट हो गई! फ़ॉर्म लॉक कर दिया गया है।"
     }
 };
@@ -729,6 +766,7 @@ function switchLanguage(lang) {
 
     document.getElementById('generate-btn').innerText = UI_TEXT[lang].generateBtn;
     document.getElementById('draft-btn').innerText = UI_TEXT[lang].btnSaveDraft;
+    document.getElementById('clear-btn').innerText = UI_TEXT[lang].btnClearForm;
     document.getElementById('new-audit-btn').innerText = UI_TEXT[lang].btnStartNew;
     document.getElementById('ui-modal-title').innerText = UI_TEXT[lang].modalTitle;
     document.getElementById('btn-share-native').innerText = UI_TEXT[lang].btnShare;
@@ -806,7 +844,6 @@ function setStatus(cardId, status) {
     const card = document.getElementById(cardId);
     if (!card) return;
 
-    // Do not allow status changes if form is locked
     if (card.getAttribute('data-locked') === 'true') return;
 
     card.classList.remove('card-error');
@@ -841,7 +878,7 @@ function setStatus(cardId, status) {
     saveDraft(true);
 }
 
-// --- DRAFT MANAGEMENT SYSTEM ---
+// --- DRAFT & CLEAR MANAGEMENT ---
 
 function saveDraft(silent = true) {
     const draftData = {
@@ -872,6 +909,45 @@ function saveDraft(silent = true) {
 
 function manualSaveDraft() {
     saveDraft(false);
+}
+
+function clearForm() {
+    if (!confirm(UI_TEXT[currentLang].clearConfirmMsg)) return;
+
+    localStorage.removeItem(DRAFT_KEY);
+
+    ['sewadar_name', 'canteen_location', 'dic_name', 'general_feedback'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.value = '';
+            el.classList.remove('input-error');
+        }
+    });
+
+    document.querySelectorAll('.check-card').forEach(card => {
+        card.removeAttribute('data-status');
+        card.classList.remove('card-error');
+
+        const btnOk = card.querySelector('.btn-ok');
+        const btnNotOk = card.querySelector('.btn-notok');
+        const btnNa = card.querySelector('.btn-na');
+        const remarksBox = card.querySelector('.remarks-box');
+        const ta = card.querySelector('textarea');
+
+        if (btnOk) btnOk.classList.remove('selected-ok');
+        if (btnNotOk) btnNotOk.classList.remove('selected-not-ok');
+        if (btnNa) btnNa.classList.remove('selected-na');
+        if (remarksBox) remarksBox.style.display = 'none';
+        if (ta) {
+            ta.value = '';
+            ta.classList.remove('input-error');
+        }
+    });
+
+    const msgEl = document.getElementById('draft-status-msg');
+    msgEl.innerText = UI_TEXT[currentLang].formClearedMsg;
+    setTimeout(() => { msgEl.innerText = ""; }, 3000);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function loadDraft() {
@@ -936,7 +1012,7 @@ function lockForm(isLocked) {
         }
     });
 
-    document.getElementById('draft-btn').style.display = isLocked ? 'none' : 'block';
+    document.getElementById('secondary-actions-group').style.display = isLocked ? 'none' : 'flex';
     document.getElementById('generate-btn').style.display = isLocked ? 'none' : 'block';
     document.getElementById('new-audit-btn').style.display = isLocked ? 'block' : 'none';
 }
