@@ -32,6 +32,8 @@
         :root {
             --bg-body: #f8fafc;
             --surface-card: #ffffff;
+            --input-bg: #f8fafc;
+            --input-disabled-bg: #f1f5f9;
             --primary: #1e293b;
             --accent: #0284c7;
             --border-color: #e2e8f0;
@@ -56,6 +58,20 @@
             --draft-color: #64748b;
             --clear-color: #dc2626;
             --new-audit-color: #16a34a;
+        }
+
+        /* Visit Mode Theme Overrides (#e6ded1 Shades) */
+        body.mode-visit {
+            --bg-body: #f3efe6;
+            --surface-card: #e6ded1;
+            --input-bg: #ede7dc;
+            --input-disabled-bg: #dcd3c4;
+            --border-color: #d1c7b7;
+            --primary: #2c251e;
+            --accent: #0284c7;
+            --text-primary: #211b15;
+            --text-secondary: #54493e;
+            --text-muted: #786b5d;
         }
 
         * {
@@ -88,6 +104,10 @@
             box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         }
 
+        body.mode-visit header {
+            background: rgba(230, 222, 209, 0.95);
+        }
+
         .header-title {
             font-size: 1.25rem;
             font-weight: 800;
@@ -97,7 +117,7 @@
 
         .lang-switch {
             display: inline-flex;
-            background: #f1f5f9;
+            background: rgba(0,0,0,0.05);
             padding: 3px;
             border-radius: 20px;
             border: 1px solid var(--border-color);
@@ -156,10 +176,10 @@
             margin-bottom: 6px;
         }
 
-        .meta-field input {
+        .meta-field input, .meta-field select {
             width: 100%;
             padding: 12px 14px;
-            background: #f8fafc;
+            background: var(--input-bg);
             border: 1px solid var(--border-color);
             border-radius: 8px;
             font-size: 0.95rem;
@@ -168,20 +188,22 @@
             transition: border-color 0.2s;
         }
 
-        .meta-field input:focus {
+        .meta-field input:focus, .meta-field select:focus {
             border-color: var(--accent);
             background: #ffffff;
         }
 
         .meta-field input:disabled, 
+        .meta-field select:disabled, 
         .remarks-box textarea:disabled, 
         .general-feedback-box textarea:disabled {
-            background-color: #f1f5f9 !important;
+            background-color: var(--input-disabled-bg) !important;
             color: #94a3b8 !important;
             cursor: not-allowed;
         }
 
-        .meta-field input.input-error {
+        .meta-field input.input-error,
+        .meta-field select.input-error {
             border-color: var(--status-notok-border) !important;
             background-color: var(--status-notok-bg) !important;
         }
@@ -244,7 +266,7 @@
             flex: 1;
             height: 48px;
             border: 1px solid var(--border-color);
-            background-color: #f1f5f9;
+            background-color: var(--input-bg);
             border-radius: 8px;
             font-size: 0.8rem;
             font-weight: 700;
@@ -291,7 +313,7 @@
         .remarks-box textarea {
             width: 100%;
             padding: 12px;
-            background: #f8fafc;
+            background: var(--input-bg);
             border: 1px solid var(--border-color);
             border-radius: 8px;
             font-size: 0.85rem;
@@ -360,6 +382,10 @@
             box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
         }
 
+        body.mode-visit .footer-bar {
+            background: rgba(230, 222, 209, 0.95);
+        }
+
         .footer-btn-container {
             width: 100%;
             max-width: 760px;
@@ -367,7 +393,6 @@
             gap: 12px;
         }
 
-        /* 50% Left Side */
         .secondary-actions {
             flex: 1 1 50%;
             display: flex;
@@ -378,7 +403,6 @@
             flex: 1;
         }
 
-        /* 50% Right Side */
         .btn-generate-wrapper {
             flex: 1 1 50%;
             display: flex;
@@ -465,7 +489,7 @@
             white-space: pre-wrap;
             font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
             font-size: 0.85rem;
-            background: #f8fafc;
+            background: var(--input-bg);
             color: var(--text-primary);
             line-height: 1.5;
         }
@@ -500,7 +524,7 @@
         .btn-share-native { background: var(--accent); color: white; }
         .btn-share-wa { background: var(--wa-color); color: white; }
         .btn-copy { background: #64748b; color: white; }
-        .btn-close { background: #e2e8f0; color: var(--text-primary); }
+        .btn-close { background: var(--border-color); color: var(--text-primary); }
     </style>
 </head>
 <body>
@@ -516,19 +540,8 @@
 <div class="container">
 
     <div class="card">
-        <div class="grid-3">
-            <div class="meta-field">
-                <label id="ui-lbl-sewadar">Sewadar Name *</label>
-                <input type="text" id="sewadar_name" placeholder="...">
-            </div>
-            <div class="meta-field">
-                <label id="ui-lbl-canteen">Canteen Number *</label>
-                <input type="text" id="canteen_location" inputmode="numeric" pattern="[0-9]*" placeholder="e.g. 1">
-            </div>
-            <div class="meta-field">
-                <label id="ui-lbl-dic">DIC Name *</label>
-                <input type="text" id="dic_name" placeholder="...">
-            </div>
+        <div class="grid-3" id="meta-fields-grid">
+            <!-- Fields rendered dynamically based on URL mode -->
         </div>
     </div>
 
@@ -543,13 +556,11 @@
 
 <div class="footer-bar">
     <div class="footer-btn-container">
-        <!-- 50% Left Side (Shared equally 25% / 25%) -->
         <div class="secondary-actions" id="secondary-actions-group">
             <button type="button" class="action-btn btn-draft" id="draft-btn" onclick="manualSaveDraft()">💾 Save Draft</button>
             <button type="button" class="action-btn btn-clear" id="clear-btn" onclick="clearForm()">🗑️ Clear Form</button>
         </div>
 
-        <!-- 50% Right Side -->
         <div class="btn-generate-wrapper">
             <button type="button" class="action-btn" id="generate-btn">Generate Report</button>
             <button type="button" class="action-btn btn-new-audit" id="new-audit-btn" onclick="startNewAudit()">➕ Start New Audit</button>
@@ -580,15 +591,27 @@
 
 <script>
 let currentLang = 'en';
-const DRAFT_KEY = 'qc_audit_form_draft';
+
+// --- MODE DETECTION ---
+const urlParams = new URLSearchParams(window.location.search);
+const isVisitMode = urlParams.get('mode') === 'visit';
+const DRAFT_KEY = isVisitMode ? 'qc_audit_form_draft_visit' : 'qc_audit_form_draft_regular';
+
+// Apply Theme Class for Visit Mode
+if (isVisitMode) {
+    document.body.classList.add('mode-visit');
+}
 
 const UI_TEXT = {
     en: {
-        title: "QC Report",
+        title: isVisitMode ? "QC Event Visit Report" : "QC Report",
         sewadarLabel: "Sewadar Name *",
         sewadarPlaceholder: "Enter sewadar name",
         canteenLabel: "Canteen Number *",
         canteenPlaceholder: "e.g. 1",
+        canteenSelectDefault: "Select Canteen...",
+        slotLabel: "Slot *",
+        slotSelectDefault: "Select Slot...",
         dicNameLabel: "DIC Name *",
         dicNamePlaceholder: "Enter DIC name",
         btnOk: "✓ OK",
@@ -614,11 +637,14 @@ const UI_TEXT = {
         formLockedMsg: "Report submitted! Form locked to prevent editing."
     },
     hi: {
-        title: "QC रिपोर्ट",
+        title: isVisitMode ? "QC इवेंट विजिट रिपोर्ट" : "QC रिपोर्ट",
         sewadarLabel: "सेवादार का नाम *",
         sewadarPlaceholder: "सेवादार का नाम लिखें",
         canteenLabel: "कैंटीन नंबर *",
         canteenPlaceholder: "उदा. 1",
+        canteenSelectDefault: "कैंटीन चुनें...",
+        slotLabel: "स्लॉट (Slot) *",
+        slotSelectDefault: "स्लॉट चुनें...",
         dicNameLabel: "डीआईसी का नाम *",
         dicNamePlaceholder: "डीआईसी का नाम लिखें",
         btnOk: "✓ सब ठीक है",
@@ -649,7 +675,6 @@ const AUDIT_DATA = [
     {
         category: { en: "Counters", hi: "काउंटर (Counters)" },
         items: [
-            { en: "Maintain cleanliness at the counters.", hi: "काउंटर पर सफाई रखें।" },
             { en: "Ensure all sewadars wear headcovers, aprons, and gloves.", hi: "सभी सेवादार सिर का कपड़ा, एप्रन और दस्ताने पहनें।" },
             { en: "Keep counters free of surplus coupons.", hi: "काउंटर पर अतिरिक्त कूपन न जमा न होने दें।" },
             { en: "Ensure coupons are torn properly.", hi: "कूपन सही तरीके से फाड़े जाएं।" },
@@ -659,9 +684,7 @@ const AUDIT_DATA = [
     {
         category: { en: "Washing Area", hi: "बर्तन धुलाई की जगह (Washing Area)" },
         items: [
-            { en: "Soap Stain on utensils.", hi: "बर्तनों पर साबुन का दाग न रहे।" },
-            { en: "Ensure all utensils are fully dried before reuse.", hi: "दोबारा इस्तेमाल से पहले बर्तन पूरी तरह सूखे हों।" },
-            { en: "Ensure proper cleanliness and hygiene around and behind the utensil washing station.", hi: "बर्तन धोने वाली जगह के आसपास और पीछे अच्छी सफाई रखें।" }
+            { en: "Ensure all utensils are fully dried before reuse.", hi: "दोबारा इस्तेमाल से पहले बर्तन पूरी तरह सूखे हों।" }
         ]
     },
     {
@@ -669,7 +692,6 @@ const AUDIT_DATA = [
         items: [
             { en: "Maintain orderly line management for smooth crowd flow.", hi: "भीड़ न हो, इसके लिए लाइन सही बनवाएं।" },
             { en: "Ensure adequate supply and availability of extra utensils.", hi: "जरूरत के हिसाब से एक्स्ट्रा बर्तन मौजूद रहें।" },
-            { en: "Keep water tanks and drinking glasses covered at all times.", hi: "पानी की टंकी और गिलास हमेशा ढके रहें।" },
             { en: "Keep all tables wiped and clean.", hi: "सभी tables पोंछकर साफ रखें।" },
             { en: "Ensure seating mats are available and neatly arranged.", hi: "बैठने की चटाइयां साफ और सही बिछी हों।" },
             { en: "Verify that signboards are accurately positioned at their respective counters.", hi: "साइनबोर्ड अपने सही काउंटर पर लगे हों।" },
@@ -677,46 +699,22 @@ const AUDIT_DATA = [
             { en: "Used bartan movement should be quiet and prompt.", hi: "इस्तेमाल किए हुए बर्तन जल्दी और बिना शोर के हटाएं।" }
         ]
     },
+    ...(isVisitMode ? [{
+        category: { en: "Old Enclosure", hi: "वृद्ध बाड़ा (Old Enclosure)" },
+        items: [
+            { en: "Enough seating space is available and properly arranged.", hi: "पर्याप्त बैठने की जगह उपलब्ध है और सही ढंग से व्यवस्थित है।" },
+            { en: "No queue for seating, and elders are given seats without waiting.", hi: "बैठने के लिए कोई लाइन नहीं है, और बुजुर्गों को बिना इंतजार किए सीट दी जाती है।" },
+            { en: "Extra coupons are not left around and are torn on time.", hi: "अतिरिक्त कूपन आसपास नहीं छोड़े जाते हैं और समय पर फाड़ दिए जाते हैं।" },
+            { en: "Fresh and hot food is available and served on time.", hi: "ताजा और गर्म भोजन उपलब्ध है और समय पर परोसा जाता है।" },
+            { en: "Sevadars serving elders wear gloves, aprons and headgear.", hi: "बुजुर्गों की सेवा करने वाले सेवादार दस्ताने, एप्रन और हेडगियर पहनते हैं।" },
+            { en: "Used utensils are removed quickly.", hi: "इस्तेमाल किए गए बर्तन जल्दी से हटा दिए जाते हैं।" }
+        ]
+    }] : []),
     {
         category: { en: "Pre Cooking", hi: "खाना बनाने की तैयारी (Pre Cooking)" },
         items: [
             { en: "Keep food preparation and cutting tables thoroughly sanitized.", hi: "सब्जी काटने और तैयारी वाली मेज पूरी तरह साफ रखें।" },
-            { en: "Ensure knives, peelers, and prep tools are washed before use.", hi: "चाकू, छिलनी और सामान इस्तेमाल से पहले धो लें।" },
-            { en: "Clean and sanitize mixers and grinders after each use.", hi: "मिक्सर-ग्राइंडर इस्तेमाल के बाद तुरंत साफ करें।" },
-            { en: "Regularly inspect and monitor deep freezer for cleanliness.", hi: "डीप फ्रीजर की सफाई रोज चेक करें।" },
-            { en: "Raw Vegetable inspection and quality control.", hi: "कच्ची सब्जियों की जांच करें कि वे ठीक हैं या नहीं।" },
             { en: "Ensure all pre-cooking sewadars wear head covers.", hi: "तैयारी करने वाले सभी सेवादार सिर ढककर रखें।" }
-        ]
-    },
-    {
-        category: { en: "Floor & Canteen Area", hi: "फर्श और कैंटीन (Floor & Canteen)" },
-        items: [
-            { en: "Keep floors clean and well-maintained.", hi: "फर्श एकदम साफ रखें।" },
-            { en: "Wipe up any spills immediately to prevent hazards.", hi: "कुछ भी गिरने पर तुरंत पोंछें ताकि कोई फिसले नहीं।" },
-            { en: "Ensure ceiling fans are dust-free and clean.", hi: "छत के पंखे साफ हों, धूल न जमी हो।" },
-            { en: "Turn off lights and fans when areas are not in use to conserve energy.", hi: "जरूरत न होने पर लाइट और पंखे बंद रखें।" },
-            { en: "Maintain adequate and proper lighting throughout the space.", hi: "हर जगह सही रोशनी बनी रहे।" },
-            { en: "Proper shoes must be worn in the cooking and canteen premises.", hi: "कुकिंग एरिया और कैंटीन में सही जूते पहनकर रहें।" },
-            { en: "Observe any hindrance in general movement caused due to layout problem.", hi: "चेक करें कि किसी सामान की वजह से रास्ते में आने-जाने में दिक्कत तो नहीं हो रही।" }
-        ]
-    },
-    {
-        category: { en: "General Instructions", hi: "जरूरी बातें (General Instructions)" },
-        items: [
-            { en: "Avoid casual chit chat while performing sewa.", hi: "सेवा के दौरान आपस में अनावश्यक बातचीत न करें।" },
-            { en: "Do not wear aprons outside the canteen area.", hi: "कैंटीन से बाहर एप्रन पहनकर न जाएं।" },
-            { en: "Limited usage of mobile phone during sewa.", hi: "सेवा के दौरान मोबाइल का इस्तेमाल कम से कम करें।" },
-            { en: "Inspect accommodation and washroom areas for cleanliness and hygiene.", hi: "रहने की जगह और टॉयलेट की सफाई चेक करें।" },
-            { en: "Conduct routine cleanliness checks on deep freezers, and verify that all cold storage items are properly labeled with date tag.", hi: "फ्रीजर की सफाई देखें और रखे सामान पर तारीख का टैग चेक करें।" }
-        ]
-    },
-    {
-        category: { en: "Safety", hi: "सुरक्षा (Safety)" },
-        items: [
-            { en: "Ensure there are no exposed electrical joints or loose wiring.", hi: "खुले या ढीले बिजली के तार न हों।" },
-            { en: "Keep all gears and moving machinery parts fully covered and guarded.", hi: "मशीनों के चलने वाले हिस्से पूरी तरह ढके हों।" },
-            { en: "Ensure staircase have adequate lighting and visible glow stickers/photoluminescent markings.", hi: "सीढ़ियों पर सही रोशनी और चमकने वाले स्टिकर हों।" },
-            { en: "Keep stairways free of oil and water spills to prevent slips.", hi: "सीढ़ियों पर तेल या पानी न गिरा हो।" }
         ]
     },
     {
@@ -732,6 +730,9 @@ const AUDIT_DATA = [
             { en: "Daliya", hi: "दलिया" },
             { en: "Puri", hi: "पूरी" },
             { en: "Subji", hi: "सब्जी" },
+            { en: "Samosa", hi: "समोसा" },
+            { en: "Bonda", hi: "बोन्डा" },
+            { en: "Pakoda", hi: "पकोड़ा" },
             { en: "Idli", hi: "इडली" },
             { en: "Sambar", hi: "सांभर" },
             { en: "Chutney", hi: "चटनी" },
@@ -741,11 +742,60 @@ const AUDIT_DATA = [
 ];
 
 document.addEventListener('DOMContentLoaded', () => {
+    renderMetaFields();
     renderChecklist();
     setupEventListeners();
     loadDraft();
     attachAutoSaveListeners();
 });
+
+function renderMetaFields() {
+    const container = document.getElementById('meta-fields-grid');
+    if (isVisitMode) {
+        container.innerHTML = `
+            <div class="meta-field">
+                <label id="ui-lbl-sewadar">${UI_TEXT[currentLang].sewadarLabel}</label>
+                <input type="text" id="sewadar_name" placeholder="${UI_TEXT[currentLang].sewadarPlaceholder}">
+            </div>
+            <div class="meta-field">
+                <label id="ui-lbl-canteen">${UI_TEXT[currentLang].canteenLabel}</label>
+                <select id="canteen_location">
+                    <option value="">${UI_TEXT[currentLang].canteenSelectDefault}</option>
+                    <option value="1">Canteen 1</option>
+                    <option value="2">Canteen 2</option>
+                    <option value="3">Canteen 3</option>
+                    <option value="4">Canteen 4</option>
+                    <option value="5">Canteen 5</option>
+                    <option value="6">Canteen 6</option>
+                </select>
+            </div>
+            <div class="meta-field">
+                <label id="ui-lbl-slot">${UI_TEXT[currentLang].slotLabel}</label>
+                <select id="slot_selection">
+                    <option value="">${UI_TEXT[currentLang].slotSelectDefault}</option>
+                    <option value="Pre-Satsang">Pre-Satsang</option>
+                    <option value="Post-Satsang">Post-Satsang</option>
+                    <option value="Evening">Evening</option>
+                </select>
+            </div>
+        `;
+    } else {
+        container.innerHTML = `
+            <div class="meta-field">
+                <label id="ui-lbl-sewadar">${UI_TEXT[currentLang].sewadarLabel}</label>
+                <input type="text" id="sewadar_name" placeholder="${UI_TEXT[currentLang].sewadarPlaceholder}">
+            </div>
+            <div class="meta-field">
+                <label id="ui-lbl-canteen">${UI_TEXT[currentLang].canteenLabel}</label>
+                <input type="text" id="canteen_location" inputmode="numeric" pattern="[0-9]*" placeholder="${UI_TEXT[currentLang].canteenPlaceholder}">
+            </div>
+            <div class="meta-field">
+                <label id="ui-lbl-dic">${UI_TEXT[currentLang].dicNameLabel}</label>
+                <input type="text" id="dic_name" placeholder="${UI_TEXT[currentLang].dicNamePlaceholder}">
+            </div>
+        `;
+    }
+}
 
 function switchLanguage(lang) {
     currentLang = lang;
@@ -757,9 +807,22 @@ function switchLanguage(lang) {
     document.getElementById('ui-lbl-sewadar').innerText = UI_TEXT[lang].sewadarLabel;
     document.getElementById('sewadar_name').placeholder = UI_TEXT[lang].sewadarPlaceholder;
     document.getElementById('ui-lbl-canteen').innerText = UI_TEXT[lang].canteenLabel;
-    document.getElementById('canteen_location').placeholder = UI_TEXT[lang].canteenPlaceholder;
-    document.getElementById('ui-lbl-dic').innerText = UI_TEXT[lang].dicNameLabel;
-    document.getElementById('dic_name').placeholder = UI_TEXT[lang].dicNamePlaceholder;
+
+    if (isVisitMode) {
+        document.getElementById('ui-lbl-slot').innerText = UI_TEXT[lang].slotLabel;
+        const canteenSelect = document.getElementById('canteen_location');
+        if (canteenSelect && canteenSelect.options.length > 0) {
+            canteenSelect.options[0].text = UI_TEXT[lang].canteenSelectDefault;
+        }
+        const slotSelect = document.getElementById('slot_selection');
+        if (slotSelect && slotSelect.options.length > 0) {
+            slotSelect.options[0].text = UI_TEXT[lang].slotSelectDefault;
+        }
+    } else {
+        document.getElementById('canteen_location').placeholder = UI_TEXT[lang].canteenPlaceholder;
+        document.getElementById('ui-lbl-dic').innerText = UI_TEXT[lang].dicNameLabel;
+        document.getElementById('dic_name').placeholder = UI_TEXT[lang].dicNamePlaceholder;
+    }
 
     document.getElementById('ui-lbl-general-feedback').innerText = UI_TEXT[lang].generalFeedbackLabel;
     document.getElementById('general_feedback').placeholder = UI_TEXT[lang].generalFeedbackPlaceholder;
@@ -811,7 +874,13 @@ function renderChecklist() {
             const catEn = sec.category.en;
 
             html += `
-                <div class="check-card" id="${uniqueId}" data-cat-en="${catEn}" data-text-en="${itemTextEn}" data-cat="${catTitle}" data-text="${itemText}" data-is-taste="${isTaste}">
+                <div class="check-card" 
+                     id="${uniqueId}" 
+                     data-cat="${catTitle}" 
+                     data-cat-en="${catEn}" 
+                     data-text="${itemText}" 
+                     data-text-en="${itemTextEn}" 
+                     data-is-taste="${isTaste}">
                     <div class="check-title">${itemText}</div>
                     <div class="btn-group">
                         <button type="button" class="status-btn btn-ok" onclick="setStatus('${uniqueId}', 'OK')">${UI_TEXT[currentLang].btnOk}</button>
@@ -884,7 +953,8 @@ function saveDraft(silent = true) {
     const draftData = {
         sewadar: document.getElementById('sewadar_name')?.value || '',
         canteen: document.getElementById('canteen_location')?.value || '',
-        dic: document.getElementById('dic_name')?.value || '',
+        dic: isVisitMode ? '' : (document.getElementById('dic_name')?.value || ''),
+        slot: isVisitMode ? (document.getElementById('slot_selection')?.value || '') : '',
         generalFeedback: document.getElementById('general_feedback')?.value || '',
         selections: {},
         remarks: {}
@@ -916,7 +986,14 @@ function clearForm() {
 
     localStorage.removeItem(DRAFT_KEY);
 
-    ['sewadar_name', 'canteen_location', 'dic_name', 'general_feedback'].forEach(id => {
+    const fieldsToClear = ['sewadar_name', 'canteen_location', 'general_feedback'];
+    if (isVisitMode) {
+        fieldsToClear.push('slot_selection');
+    } else {
+        fieldsToClear.push('dic_name');
+    }
+
+    fieldsToClear.forEach(id => {
         const el = document.getElementById(id);
         if (el) {
             el.value = '';
@@ -959,7 +1036,11 @@ function loadDraft() {
 
         if (draft.sewadar) document.getElementById('sewadar_name').value = draft.sewadar;
         if (draft.canteen) document.getElementById('canteen_location').value = draft.canteen;
-        if (draft.dic) document.getElementById('dic_name').value = draft.dic;
+        if (isVisitMode) {
+            if (draft.slot) document.getElementById('slot_selection').value = draft.slot;
+        } else {
+            if (draft.dic) document.getElementById('dic_name').value = draft.dic;
+        }
         if (draft.generalFeedback) document.getElementById('general_feedback').value = draft.generalFeedback;
 
         if (draft.selections) {
@@ -983,10 +1064,18 @@ function loadDraft() {
 }
 
 function attachAutoSaveListeners() {
-    ['sewadar_name', 'canteen_location', 'dic_name', 'general_feedback'].forEach(id => {
+    const idsToWatch = ['sewadar_name', 'canteen_location', 'general_feedback'];
+    if (isVisitMode) {
+        idsToWatch.push('slot_selection');
+    } else {
+        idsToWatch.push('dic_name');
+    }
+
+    idsToWatch.forEach(id => {
         const el = document.getElementById(id);
         if (el) {
             el.addEventListener('input', () => saveDraft(true));
+            el.addEventListener('change', () => saveDraft(true));
         }
     });
 
@@ -998,7 +1087,7 @@ function attachAutoSaveListeners() {
 // --- LOCK & RESET CONTROLS ---
 
 function lockForm(isLocked) {
-    const textInputs = document.querySelectorAll('input, textarea');
+    const textInputs = document.querySelectorAll('input, select, textarea');
     textInputs.forEach(el => { el.disabled = isLocked; });
 
     const statusBtns = document.querySelectorAll('.status-btn');
@@ -1022,7 +1111,11 @@ function startNewAudit() {
 
     document.getElementById('sewadar_name').value = '';
     document.getElementById('canteen_location').value = '';
-    document.getElementById('dic_name').value = '';
+    if (isVisitMode) {
+        document.getElementById('slot_selection').value = '';
+    } else {
+        document.getElementById('dic_name').value = '';
+    }
     document.getElementById('general_feedback').value = '';
 
     document.querySelectorAll('.check-card').forEach(card => {
@@ -1056,11 +1149,17 @@ function validateForm() {
 
     const sewadarEl = document.getElementById('sewadar_name');
     const canteenEl = document.getElementById('canteen_location');
-    const dicEl = document.getElementById('dic_name');
+    const requiredHeaderElements = [sewadarEl, canteenEl];
 
-    [sewadarEl, canteenEl, dicEl].forEach(el => {
-        if (!el.value.trim()) {
-            el.classList.add('input-error');
+    if (isVisitMode) {
+        requiredHeaderElements.push(document.getElementById('slot_selection'));
+    } else {
+        requiredHeaderElements.push(document.getElementById('dic_name'));
+    }
+
+    requiredHeaderElements.forEach(el => {
+        if (!el || !el.value.trim()) {
+            if (el) el.classList.add('input-error');
             isValid = false;
             if (!firstErrorElement) firstErrorElement = el;
         } else {
@@ -1102,19 +1201,24 @@ function generateReport() {
     if (!validateForm()) return;
 
     const sewadar = document.getElementById('sewadar_name').value.trim();
-    const canteenRaw = document.getElementById('canteen_location').value.trim();
-    const canteen = `C-${canteenRaw}`;
-    const dic = document.getElementById('dic_name').value.trim();
+    const canteenVal = document.getElementById('canteen_location').value.trim();
+    const canteen = `C-${canteenVal}`;
+    const dic = isVisitMode ? null : document.getElementById('dic_name').value.trim();
+    const slot = isVisitMode ? document.getElementById('slot_selection').value.trim() : null;
     const generalFeedback = document.getElementById('general_feedback').value.trim();
     
     const now = new Date();
     const dateStr = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
-    let report = `📋 *QC REPORT*\n`;
+    let report = isVisitMode ? `📋 *QC VISIT REPORT*\n` : `📋 *QC REPORT*\n`;
     report += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
     report += `👤 *${currentLang === 'hi' ? 'सेवादार का नाम' : 'Sewadar Name'}:* ${sewadar}\n`;
     report += `🏬 *${currentLang === 'hi' ? 'कैंटीन नंबर' : 'Canteen Number'}:* ${canteen}\n`;
-    report += `👔 *${currentLang === 'hi' ? 'डीआईसी का नाम' : 'DIC Name'}:* ${dic}\n`;
+    if (isVisitMode) {
+        report += `⏰ *${currentLang === 'hi' ? 'स्लॉट' : 'Slot'}:* ${slot}\n`;
+    } else {
+        report += `👔 *${currentLang === 'hi' ? 'डीआईसी का नाम' : 'DIC Name'}:* ${dic}\n`;
+    }
     report += `📅 *${currentLang === 'hi' ? 'तारीख' : 'Date'}:* ${dateStr}\n`;
     report += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
 
@@ -1126,50 +1230,61 @@ function generateReport() {
 
     allCards.forEach(card => {
         const cat = card.getAttribute('data-cat') || 'General';
-        const text = card.getAttribute('data-text');
+        const catEn = card.getAttribute('data-cat-en') || cat;
+        const text = card.getAttribute('data-text') || '';
+        const textEn = card.getAttribute('data-text-en') || text;
         const status = card.getAttribute('data-status');
         const remarkArea = card.querySelector('textarea');
         const remark = remarkArea ? remarkArea.value.trim() : '';
 
         allResponsesList.push({
             category: cat,
+            categoryEn: catEn,
             item: text,
+            itemEn: textEn,
             status: status,
             remark: remark
         });
 
-        if (!categorizedMap[cat]) {
-            categorizedMap[cat] = {
+        if (!categorizedMap[catEn]) {
+            categorizedMap[catEn] = {
                 category: cat,
+                categoryEn: catEn,
                 status: 'CLEAN',
                 issueCount: 0,
                 items: [],
+                itemsEn: [],
                 remarks: []
             };
         }
 
         if (status === 'Not OK') {
-            categorizedMap[cat].status = 'ISSUES';
-            categorizedMap[cat].issueCount += 1;
-            if (text) categorizedMap[cat].items.push(text);
+            categorizedMap[catEn].status = 'ISSUES';
+            categorizedMap[catEn].issueCount += 1;
+            if (text) categorizedMap[catEn].items.push(text);
+            if (textEn) categorizedMap[catEn].itemsEn.push(textEn);
 
             exceptionsList.push({
                 category: cat,
+                categoryEn: catEn,
                 item: text,
+                itemEn: textEn,
                 remark: remark
             });
         }
 
-        if (remark && !categorizedMap[cat].remarks.includes(remark)) {
-            categorizedMap[cat].remarks.push(remark);
+        if (remark && !categorizedMap[catEn].remarks.includes(remark)) {
+            categorizedMap[catEn].remarks.push(remark);
         }
     });
 
     const categorizedIssues = Object.values(categorizedMap).map(c => ({
         category: c.category,
+        categoryEn: c.categoryEn,
         status: c.status,
         issueCount: c.issueCount,
         items: c.items,
+        itemsEn: c.itemsEn,
         remarks: c.remarks.join(' | ')
     }));
 
@@ -1206,10 +1321,10 @@ function generateReport() {
     }
 
     // Save Payload to Firestore
-    db.collection("reports").add({
+    const payload = {
+        mode: isVisitMode ? 'visit' : 'regular',
         sewadarName: sewadar,
         canteenNumber: canteen,
-        dicName: dic,
         generalFeedback: generalFeedback,
         language: currentLang,
         exceptionsCount: notOkCards.length,
@@ -1218,7 +1333,15 @@ function generateReport() {
         categorizedIssues: categorizedIssues,
         fullReportText: report,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    })
+    };
+
+    if (isVisitMode) {
+        payload.slot = slot;
+    } else {
+        payload.dicName = dic;
+    }
+
+    db.collection("reports").add(payload)
     .then((docRef) => {
         console.log("Report saved successfully with ID:", docRef.id);
     })
@@ -1257,22 +1380,30 @@ function setupEventListeners() {
     document.getElementById('btn-share-native').addEventListener('click', () => {
         const text = document.getElementById('report-text').innerText;
         if (navigator.share) {
-            navigator.share({ title: 'QC Report', text: text }).catch(() => {});
+            navigator.share({ title: isVisitMode ? 'QC Visit Report' : 'QC Report', text: text }).catch(() => {});
         } else {
             window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
         }
     });
 
     const canteenInput = document.getElementById('canteen_location');
-    canteenInput.addEventListener('input', (e) => {
-        e.target.value = e.target.value.replace(/\D/g, '');
-        if (e.target.value.trim()) e.target.classList.remove('input-error');
-    });
-
-    ['sewadar_name', 'dic_name'].forEach(id => {
-        document.getElementById(id).addEventListener('input', (e) => {
+    if (!isVisitMode && canteenInput) {
+        canteenInput.addEventListener('input', (e) => {
+            e.target.value = e.target.value.replace(/\D/g, '');
             if (e.target.value.trim()) e.target.classList.remove('input-error');
         });
+    }
+
+    const clearInputError = (e) => {
+        if (e.target.value.trim()) e.target.classList.remove('input-error');
+    };
+
+    ['sewadar_name', 'canteen_location', 'slot_selection', 'dic_name'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('input', clearInputError);
+            el.addEventListener('change', clearInputError);
+        }
     });
 }
 </script>
