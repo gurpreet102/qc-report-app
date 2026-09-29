@@ -25,13 +25,14 @@
 
       firebase.initializeApp(firebaseConfig);
       const db = firebase.firestore();
-// Force long polling to bypass network firewall / WebSocket restrictions
-  db.settings({
-    experimentalForceLongPolling: true
-  });
+      
+      // Force long polling to bypass network firewall / WebSocket restrictions
+      db.settings({
+        experimentalForceLongPolling: true
+      });
 
-  // Enable persistence for instant loads
-  db.enablePersistence({ synchronizeTabs: true }).catch(() => {});
+      // Enable persistence for instant loads
+      db.enablePersistence({ synchronizeTabs: true }).catch(function() {});
     </script>
 
     <style>
@@ -200,6 +201,18 @@
         }
         .btn-refresh { background: var(--accent); color: white; }
         .btn-export { background: #16a34a; color: white; }
+        .btn-consolidated { background: #7c3aed; color: white; }
+        .btn-whatsapp {
+            background-color: #25D366;
+            color: white;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-whatsapp:hover {
+            background-color: #1ebc57;
+        }
 
         /* Table */
         .table-container {
@@ -280,6 +293,23 @@
             padding: 12px 16px;
             border-top: 1px solid var(--border);
             text-align: right;
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+
+        /* Consolidated Report Style */
+        pre.consolidated-report {
+            background: #1e293b;
+            color: #f8fafc;
+            padding: 20px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            max-height: 55vh;
+            overflow-y: auto;
         }
     </style>
 </head>
@@ -289,6 +319,7 @@
     <header>
         <h1>QC Reports Dashboard</h1>
         <div style="display: flex; gap: 8px;">
+            <button class="btn btn-consolidated" onclick="openConsolidatedModal()">📊 Consolidated Report</button>
             <button class="btn btn-export" onclick="exportToCSV()">📥 Export CSV</button>
             <button class="btn btn-refresh" onclick="fetchReports()">🔄 Refresh</button>
         </div>
@@ -406,6 +437,35 @@
     </div>
 </div>
 
+<!-- Consolidated QC Visit Report Modal -->
+<div class="modal-overlay" id="consolidated-modal">
+    <div class="modal" style="max-width: 800px;">
+        <div class="modal-header">
+            <span>📊 Consolidated QC Visit Report</span>
+            <button style="border:none; background:none; cursor:pointer;" onclick="closeConsolidatedModal()">✕</button>
+        </div>
+        <div class="modal-body">
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap;">
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <label style="font-size: 0.85rem; font-weight: 700; color: var(--primary);">Select Date:</label>
+                    <input type="date" id="report-target-date" style="padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.85rem;" onchange="fetchAndGenerateConsolidatedReport()">
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button class="btn btn-refresh" onclick="fetchAndGenerateConsolidatedReport()">🔄 Generate Report</button>
+                    <button class="btn btn-view" onclick="copyConsolidatedReport()">📋 Copy Report</button>
+                </div>
+            </div>
+            <pre id="report-output" class="consolidated-report">Select a target date and click 'Generate Report' above to display consolidated observations...</pre>
+        </div>
+        <div class="modal-footer">
+            <a id="whatsapp-share-btn" class="btn btn-whatsapp" href="#" target="_blank" style="display: none;">
+                📲 Share via WhatsApp
+            </a>
+            <button class="btn" style="background: #e2e8f0;" onclick="closeConsolidatedModal()">Close</button>
+        </div>
+    </div>
+</div>
+
 <script>
 let allReports = [];
 let currentFilteredData = [];
@@ -416,55 +476,39 @@ let categoryChartInstance = null;
 let dayWiseChartInstance = null;
 
 // Category Normalization Map to unify Hindi / Bilingual string variants to standard English
-// Comprehensive Normalization Mapping (all lowercase keys for strict matching)
-
 const categoryMap = {
-    // Counters
     "counters": "Counters",
     "काउंटर": "Counters",
-
-    // Washing Area
     "washing area": "Washing Area",
     "बर्तन धुलाई की जगह": "Washing Area",
-
-    // Eating Area
     "eating area": "Eating Area",
     "खाने की जगह": "Eating Area",
-
-    // Pre Cooking
     "pre cooking": "Pre Cooking",
     "precooking": "Pre Cooking",
     "खाना बनाने की तैयारी": "Pre Cooking",
-
-    // Floor & Canteen Area
     "floor & canteen area": "Floor & Canteen Area",
     "floor and canteen area": "Floor & Canteen Area",
     "फर्श और कैंटीन": "Floor & Canteen Area",
-
-    // General Instructions
     "general instructions": "General Instructions",
     "जरूरी बातें": "General Instructions",
-
-    // Safety
     "safety": "Safety",
     "सुरक्षा": "Safety",
-
-    // Taste Feedback
     "taste feedback": "Taste Feedback",
     "खाने का स्वाद": "Taste Feedback"
 };
+
+// Strict Slot Hierarchy
+const SLOT_HIERARCHY = ["Pre-Satsang", "Post-Satsang", "Evening Slot"];
 
 function normalizeCategory(catStr) {
     if (!catStr) return "Uncategorized";
     
     const trimmed = catStr.trim().toLowerCase();
 
-    // 1. Direct match check
     if (categoryMap[trimmed]) {
         return categoryMap[trimmed];
     }
 
-    // 2. Keyword fallback checks (Handles bilingual combinations like "Washing Area / बर्तन धुलाई की जगह")
     if (trimmed.includes("counter") || trimmed.includes("काउंटर")) return "Counters";
     if (trimmed.includes("washing") || trimmed.includes("धुलाई")) return "Washing Area";
     if (trimmed.includes("eating") || (trimmed.includes("खाने") && trimmed.includes("जगह"))) return "Eating Area";
@@ -474,30 +518,51 @@ function normalizeCategory(catStr) {
     if (trimmed.includes("safety") || trimmed.includes("सुरक्षा")) return "Safety";
     if (trimmed.includes("taste") || trimmed.includes("स्वाद")) return "Taste Feedback";
 
-    // Fallback: return clean string if no rules match
     return catStr.trim();
 }
 
-document.addEventListener('DOMContentLoaded', fetchReports);
+function getFormattedDateWithDay(dateStr) {
+    const parts = dateStr.split('-');
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10);
+    const day = parseInt(parts[2], 10);
+    const dateObj = new Date(year, month - 1, day);
+    const options = { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' };
+    return dateObj.toLocaleDateString('en-GB', options);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Set default date picker in consolidated report modal to today's local date
+    const todayStr = new Date().toISOString().split('T')[0];
+    document.getElementById('report-target-date').value = todayStr;
+    fetchReports();
+});
 
 function fetchReports() {
     const tableBody = document.getElementById('table-body');
     tableBody.innerHTML = '<tr><td colspan="6" style="text-align:center; color: var(--text-muted);">Fetching live data...</td></tr>';
 
     db.collection("reports")
-      .orderBy("createdAt", "desc")
       .get()
-      .then((querySnapshot) => {
+      .then(function(querySnapshot) {
           allReports = [];
-          querySnapshot.forEach((doc) => {
-              allReports.push({ id: doc.id, ...doc.data() });
+          querySnapshot.forEach(function(doc) {
+              allReports.push(Object.assign({ id: doc.id }, doc.data()));
           });
+
+          // Client-side sorting fallback to ensure stability
+          allReports.sort(function(a, b) {
+              const timeA = (a.createdAt && a.createdAt.seconds) ? a.createdAt.seconds : 0;
+              const timeB = (b.createdAt && b.createdAt.seconds) ? b.createdAt.seconds : 0;
+              return timeB - timeA;
+          });
+
           populateCategoryFilterDropdown();
           applyFilters();
       })
-      .catch((error) => {
+      .catch(function(error) {
           console.error("Error loading reports:", error);
-          tableBody.innerHTML = `<tr><td colspan="6" style="text-align:center; color: var(--danger-text);">Failed to load data from database.</td></tr>`;
+          tableBody.innerHTML = '<tr><td colspan="6" style="text-align:center; color: var(--danger-text);">Failed to load data from database: ' + error.message + '</td></tr>';
       });
 }
 
@@ -505,31 +570,34 @@ function populateCategoryFilterDropdown() {
     const categorySelect = document.getElementById('filter-category');
     const categoriesSet = new Set();
 
-    allReports.forEach(r => {
+    allReports.forEach(function(r) {
         if (r.categorizedIssues) {
-            r.categorizedIssues.forEach(c => categoriesSet.add(normalizeCategory(c.category)));
+            r.categorizedIssues.forEach(function(c) {
+                categoriesSet.add(normalizeCategory(c.category));
+            });
         }
     });
 
     categorySelect.innerHTML = '<option value="ALL">All Categories</option>';
-    categoriesSet.forEach(cat => {
-        categorySelect.innerHTML += `<option value="${cat}">${cat}</option>`;
+    categoriesSet.forEach(function(cat) {
+        categorySelect.innerHTML += '<option value="' + cat + '">' + cat + '</option>';
     });
 }
 
 function updateStatsAndVisuals(filteredData) {
     const total = filteredData.length;
-    const totalExceptions = filteredData.reduce((acc, r) => acc + (r.exceptionsCount || 0), 0);
+    const totalExceptions = filteredData.reduce(function(acc, r) {
+        return acc + (r.exceptionsCount || 0);
+    }, 0);
 
     document.getElementById('stat-total').innerText = total;
     document.getElementById('stat-exceptions-count').innerText = totalExceptions;
 
-    // Calculate Category Aggregations using Normalized Names
     const categoryCounts = {};
 
-    filteredData.forEach(r => {
+    filteredData.forEach(function(r) {
         if (r.categorizedIssues) {
-            r.categorizedIssues.forEach(c => {
+            r.categorizedIssues.forEach(function(c) {
                 if (c.issueCount > 0) {
                     const normCat = normalizeCategory(c.category);
                     categoryCounts[normCat] = (categoryCounts[normCat] || 0) + c.issueCount;
@@ -538,22 +606,22 @@ function updateStatsAndVisuals(filteredData) {
         }
     });
 
-    // Update Category Pills
     const pillsContainer = document.getElementById('category-summary-pills');
     const categoryEntries = Object.entries(categoryCounts);
     
     if (categoryEntries.length === 0) {
         pillsContainer.innerHTML = '<span style="color: var(--success-text); font-size: 0.85rem; font-weight:600;">✔ No exceptions recorded in selected records.</span>';
     } else {
-        pillsContainer.innerHTML = categoryEntries.map(([cat, count]) => `
-            <div class="category-pill" onclick="filterByCategoryDirect('${cat}')" title="Filter table by ${cat}">
-                <span>${cat}</span>
-                <span class="category-pill-count">${count}</span>
-            </div>
-        `).join('');
+        pillsContainer.innerHTML = categoryEntries.map(function(entry) {
+            const cat = entry[0];
+            const count = entry[1];
+            return '<div class="category-pill" onclick="filterByCategoryDirect(\'' + cat + '\')" title="Filter table by ' + cat + '">' +
+                '<span>' + cat + '</span>' +
+                '<span class="category-pill-count">' + count + '</span>' +
+            '</div>';
+        }).join('');
     }
 
-    // Render Interactive Charts
     renderInteractiveCategoryChart(categoryCounts);
     renderInteractiveDayWiseChart(filteredData);
 }
@@ -586,15 +654,15 @@ function renderInteractiveCategoryChart(dataObject) {
                 tooltip: {
                     callbacks: {
                         label: function(context) {
-                            return ` ${context.label}: ${context.raw} Issues`;
+                            return ' ' + context.label + ': ' + context.raw + ' Issues';
                         }
                     }
                 }
             },
-            onHover: (event, chartElement) => {
+            onHover: function(event, chartElement) {
                 event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
             },
-            onClick: (e, elements) => {
+            onClick: function(e, elements) {
                 if (elements.length > 0) {
                     const index = elements[0].index;
                     const selectedCategory = labels[index];
@@ -608,36 +676,39 @@ function renderInteractiveCategoryChart(dataObject) {
 function renderInteractiveDayWiseChart(filteredData) {
     const ctx = document.getElementById('dayWiseChart').getContext('2d');
     
-    // Group exceptions count by date (YYYY-MM-DD)
     const dailyExceptions = {};
 
-    filteredData.forEach(r => {
+    filteredData.forEach(function(r) {
+        let dateStr = null;
         if (r.createdAt && r.createdAt.seconds) {
             const dateObj = new Date(r.createdAt.seconds * 1000);
-            const dateStr = dateObj.toISOString().split('T')[0];
+            dateStr = dateObj.toISOString().split('T')[0];
+        } else if (r.date) {
+            dateStr = r.date;
+        }
+
+        if (dateStr) {
             const excCount = r.exceptionsCount || 0;
-            
             dailyExceptions[dateStr] = (dailyExceptions[dateStr] || 0) + excCount;
         }
     });
 
-    // Sort dates chronologically
-    let sortedDates = Object.keys(dailyExceptions).sort((a, b) => new Date(a) - new Date(b));
+    let sortedDates = Object.keys(dailyExceptions).sort(function(a, b) {
+        return new Date(a) - new Date(b);
+    });
 
-    // Cap to last 10 days if more than 10 dates are present
     const isCapped = sortedDates.length > 10;
     if (isCapped) {
         sortedDates = sortedDates.slice(-10);
     }
 
-    // Update UI Badge Context
     const badgeEl = document.getElementById('dayWiseBadge');
     if (badgeEl) {
         badgeEl.textContent = isCapped ? "💡 Showing Last 10 Days" : "💡 Showing Selected Days";
     }
 
     const labels = sortedDates;
-    const data = sortedDates.map(date => dailyExceptions[date]);
+    const data = sortedDates.map(function(date) { return dailyExceptions[date]; });
 
     if (dayWiseChartInstance) {
         dayWiseChartInstance.destroy();
@@ -663,7 +734,7 @@ function renderInteractiveDayWiseChart(filteredData) {
                 tooltip: {
                     callbacks: {
                         label: function(context) {
-                            return ` ${context.raw} total exceptions`;
+                            return ' ' + context.raw + ' total exceptions';
                         }
                     }
                 }
@@ -679,10 +750,10 @@ function renderInteractiveDayWiseChart(filteredData) {
                     ticks: { precision: 0 } 
                 }
             },
-            onHover: (event, chartElement) => {
+            onHover: function(event, chartElement) {
                 event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
             },
-            onClick: (e, elements) => {
+            onClick: function(e, elements) {
                 if (elements.length > 0) {
                     const index = elements[0].index;
                     const clickedDate = labels[index];
@@ -711,7 +782,7 @@ function applyFilters() {
     const startDate = startDateVal ? new Date(startDateVal + "T00:00:00") : null;
     const endDate = endDateVal ? new Date(endDateVal + "T23:59:59") : null;
 
-    currentFilteredData = allReports.filter(r => {
+    currentFilteredData = allReports.filter(function(r) {
         const matchesSearch = 
             (r.sewadarName || '').toLowerCase().includes(search) ||
             (r.canteenNumber || '').toString().toLowerCase().includes(search) ||
@@ -723,14 +794,18 @@ function applyFilters() {
 
         let matchesCategory = true;
         if (selectedCategory !== 'ALL') {
-            matchesCategory = r.categorizedIssues && r.categorizedIssues.some(
-                c => normalizeCategory(c.category) === selectedCategory && c.issueCount > 0
-            );
+            matchesCategory = r.categorizedIssues && r.categorizedIssues.some(function(c) {
+                return normalizeCategory(c.category) === selectedCategory && c.issueCount > 0;
+            });
         }
 
         let matchesDate = true;
         if (r.createdAt && r.createdAt.seconds) {
             const reportDate = new Date(r.createdAt.seconds * 1000);
+            if (startDate && reportDate < startDate) matchesDate = false;
+            if (endDate && reportDate > endDate) matchesDate = false;
+        } else if (r.date) {
+            const reportDate = new Date(r.date + "T00:00:00");
             if (startDate && reportDate < startDate) matchesDate = false;
             if (endDate && reportDate > endDate) matchesDate = false;
         }
@@ -767,10 +842,10 @@ function renderPaginatedView() {
 
     document.getElementById('pagination-info').innerText = 
         totalRecords > 0 
-            ? `Showing ${startIndex + 1} - ${endIndex} of ${totalRecords} entries` 
+            ? 'Showing ' + (startIndex + 1) + ' - ' + endIndex + ' of ' + totalRecords + ' entries' 
             : 'Showing 0 - 0 of 0 entries';
 
-    document.getElementById('page-num').innerText = `Page ${currentPage} of ${totalPages}`;
+    document.getElementById('page-num').innerText = 'Page ' + currentPage + ' of ' + totalPages;
     document.getElementById('btn-prev').disabled = currentPage === 1;
     document.getElementById('btn-next').disabled = currentPage === totalPages || totalRecords === 0;
 }
@@ -783,116 +858,101 @@ function renderTable(data) {
     }
 
     let html = '';
-    data.forEach(r => {
-        const dateFormatted = r.createdAt ? new Date(r.createdAt.seconds * 1000).toLocaleString('en-GB') : 'N/A';
+    data.forEach(function(r) {
+        const dateFormatted = r.createdAt ? new Date(r.createdAt.seconds * 1000).toLocaleString('en-GB') : (r.date || 'N/A');
         const excCount = r.exceptionsCount || 0;
         const badge = excCount > 0 
-            ? `<span class="badge badge-danger">${excCount} Issues</span>`
-            : `<span style="color: var(--text-muted); font-size: 0.8rem; font-weight: 600;">0 Issues</span>`;
+            ? '<span class="badge badge-danger">' + excCount + ' Issues</span>'
+            : '<span style="color: var(--text-muted); font-size: 0.8rem; font-weight: 600;">0 Issues</span>';
 
         let categoryTags = '<span style="color: var(--text-muted); font-size: 0.8rem;">None</span>';
         if (r.categorizedIssues && r.categorizedIssues.length > 0) {
-            const failedCats = r.categorizedIssues.filter(c => c.issueCount > 0);
+            const failedCats = r.categorizedIssues.filter(function(c) { return c.issueCount > 0; });
             if (failedCats.length > 0) {
-                categoryTags = failedCats.map(c => {
+                categoryTags = failedCats.map(function(c) {
                     const normCat = normalizeCategory(c.category);
-                    return `<span style="display:inline-block; margin:2px; padding:2px 6px; background:#fef3c7; color:#92400e; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;" onclick="filterByCategoryDirect('${normCat}')">${normCat} (${c.issueCount})</span>`;
+                    return '<span style="display:inline-block; margin:2px; padding:2px 6px; background:#fef3c7; color:#92400e; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;" onclick="filterByCategoryDirect(\'' + normCat + '\')">' + normCat + ' (' + c.issueCount + ')</span>';
                 }).join(' ');
             }
         }
 
-        html += `
-            <tr>
-                <td>${dateFormatted}</td>
-                <td><strong>${r.canteenNumber || 'N/A'}</strong></td>
-                <td>${r.sewadarName || 'N/A'}</td>
-                <td>${badge}</td>
-                <td>${categoryTags}</td>
-                <td><button class="btn-view" onclick="viewReport('${r.id}')">View Analysis</button></td>
-            </tr>
-        `;
+        html += '<tr>' +
+            '<td>' + dateFormatted + '</td>' +
+            '<td><strong>' + (r.canteenNumber || 'N/A') + '</strong></td>' +
+            '<td>' + (r.sewadarName || 'N/A') + '</td>' +
+            '<td>' + badge + '</td>' +
+            '<td>' + categoryTags + '</td>' +
+            '<td><button class="btn-view" onclick="viewReport(\'' + r.id + '\')">View Analysis</button></td>' +
+        '</tr>';
     });
 
     tableBody.innerHTML = html;
 }
 
 function viewReport(id) {
-    const report = allReports.find(r => r.id === id);
+    const report = allReports.find(function(r) { return r.id === id; });
     if (!report) return;
 
     const modalContent = document.getElementById('modal-content');
     
-    let html = `
-        <div style="background: white; padding: 12px; border: 1px solid var(--border); border-radius: 6px; margin-bottom: 16px;">
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.85rem;">
-                <div><strong>Canteen:</strong> ${report.canteenNumber || 'N/A'}</div>
-                <div><strong>Sewadar:</strong> ${report.sewadarName || 'N/A'}</div>
-                <div><strong>DIC:</strong> ${report.dicName || 'N/A'}</div>
-                <div><strong>Date:</strong> ${report.createdAt ? new Date(report.createdAt.seconds * 1000).toLocaleString('en-GB') : 'N/A'}</div>
-            </div>
-        </div>
-        
-        <h3 style="font-size: 0.95rem; font-weight:700; color: var(--primary); margin-bottom: 12px;">Categorized Analysis & Remarks</h3>
-    `;
+    let html = '<div style="background: white; padding: 12px; border: 1px solid var(--border); border-radius: 6px; margin-bottom: 16px;">' +
+        '<div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.85rem;">' +
+            '<div><strong>Canteen:</strong> ' + (report.canteenNumber || 'N/A') + '</div>' +
+            '<div><strong>Sewadar:</strong> ' + (report.sewadarName || 'N/A') + '</div>' +
+            '<div><strong>DIC:</strong> ' + (report.dicName || 'N/A') + '</div>' +
+            '<div><strong>Date:</strong> ' + (report.createdAt ? new Date(report.createdAt.seconds * 1000).toLocaleString('en-GB') : (report.date || 'N/A')) + '</div>' +
+        '</div>' +
+    '</div>' +
+    '<h3 style="font-size: 0.95rem; font-weight:700; color: var(--primary); margin-bottom: 12px;">Categorized Analysis & Remarks</h3>';
 
     if (report.categorizedIssues && report.categorizedIssues.length > 0) {
-        report.categorizedIssues.forEach(sec => {
+        report.categorizedIssues.forEach(function(sec) {
             const normCategory = normalizeCategory(sec.category);
             const isClean = sec.issueCount === 0;
             const cardBg = isClean ? '#ffffff' : '#fff1f2';
-            const cardBorder = isClean ? '#e2e8f0' : '#fecdd3';
+            const cardBorder = isClean ? '#fecdd3' : '#fecdd3';
             const statusBadge = isClean 
-                ? `<span style="background:#f1f5f9; color:#64748b; padding:2px 8px; border-radius:10px; font-weight:600; font-size:0.75rem;">0 ISSUES</span>`
-                : `<span style="background:#fee2e2; color:#991b1b; padding:2px 8px; border-radius:10px; font-weight:700; font-size:0.75rem;">${sec.issueCount} ISSUES</span>`;
+                ? '<span style="background:#f1f5f9; color:#64748b; padding:2px 8px; border-radius:10px; font-weight:600; font-size:0.75rem;">0 ISSUES</span>'
+                : '<span style="background:#fee2e2; color:#991b1b; padding:2px 8px; border-radius:10px; font-weight:700; font-size:0.75rem;">' + sec.issueCount + ' ISSUES</span>';
 
-            html += `
-                <div style="background: ${cardBg}; border: 1px solid ${cardBorder}; border-radius: 8px; padding: 14px; margin-bottom: 12px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
-                        <strong style="font-size: 0.9rem; color: #0f172a;">${normCategory}</strong>
-                        ${statusBadge}
-                    </div>
-            `;
+            html += '<div style="background: ' + cardBg + '; border: 1px solid ' + cardBorder + '; border-radius: 8px; padding: 14px; margin-bottom: 12px;">' +
+                '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">' +
+                    '<strong style="font-size: 0.9rem; color: #0f172a;">' + normCategory + '</strong>' +
+                    statusBadge +
+                '</div>';
 
             if (sec.items && sec.items.length > 0) {
-                html += `<ul style="margin: 0 0 8px 18px; font-size: 0.85rem; color: #334155;">`;
-                sec.items.forEach(item => {
-                    html += `<li style="margin-bottom: 2px;">${item}</li>`;
+                html += '<ul style="margin: 0 0 8px 18px; font-size: 0.85rem; color: #334155;">';
+                sec.items.forEach(function(item) {
+                    html += '<li style="margin-bottom: 2px;">' + item + '</li>';
                 });
-                html += `</ul>`;
+                html += '</ul>';
             } else {
-                html += `<div style="font-size: 0.8rem; color: #64748b; margin-bottom: 8px;">No exceptions recorded in this category.</div>`;
+                html += '<div style="font-size: 0.8rem; color: #64748b; margin-bottom: 8px;">No exceptions recorded in this category.</div>';
             }
 
             if (sec.remarks) {
-                html += `
-                    <div style="background: rgba(255,255,255,0.75); border-left: 3px solid #0284c7; padding: 6px 10px; font-size: 0.8rem; color: #0f172a; border-radius: 0 4px 4px 0;">
-                        <strong>Remarks:</strong> ${sec.remarks}
-                    </div>
-                `;
+                html += '<div style="background: rgba(255,255,255,0.75); border-left: 3px solid #0284c7; padding: 6px 10px; font-size: 0.8rem; color: #0f172a; border-radius: 0 4px 4px 0;">' +
+                    '<strong>Remarks:</strong> ' + sec.remarks +
+                '</div>';
             }
 
-            html += `</div>`;
+            html += '</div>';
         });
     }
 
-    // --- General Feedback Section ---
     if (report.generalFeedback && report.generalFeedback.trim() !== '') {
-        html += `
-            <div style="background: #e0f2fe; border: 1px solid #bae6fd; border-radius: 8px; padding: 14px; margin-bottom: 16px;">
-                <strong style="font-size: 0.9rem; color: #0369a1; display: block; margin-bottom: 6px;">💬 Feedback / Suggestion / Observation</strong>
-                <div style="font-size: 0.85rem; color: #0f172a; white-space: pre-wrap;">${report.generalFeedback}</div>
-            </div>
-        `;
+        html += '<div style="background: #e0f2fe; border: 1px solid #bae6fd; border-radius: 8px; padding: 14px; margin-bottom: 16px;">' +
+            '<strong style="font-size: 0.9rem; color: #0369a1; display: block; margin-bottom: 6px;">💬 Feedback / Suggestion / Observation</strong>' +
+            '<div style="font-size: 0.85rem; color: #0f172a; white-space: pre-wrap;">' + report.generalFeedback + '</div>' +
+        '</div>';
     }
 
-    // --- Full Generated Report Text Section ---
     if (report.fullReportText && report.fullReportText.trim() !== '') {
-        html += `
-            <div style="margin-top: 16px;">
-                <strong style="font-size: 0.9rem; color: var(--primary); display: block; margin-bottom: 8px;">📄 Full Text Report</strong>
-                <pre style="background: #ffffff; border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 0.8rem; white-space: pre-wrap; color: var(--text-main); overflow-x: auto;">${report.fullReportText}</pre>
-            </div>
-        `;
+        html += '<div style="margin-top: 16px;">' +
+            '<strong style="font-size: 0.9rem; color: var(--primary); display: block; margin-bottom: 8px;">📄 Full Text Report</strong>' +
+            '<pre style="background: #ffffff; border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 0.8rem; white-space: pre-wrap; color: var(--text-main); overflow-x: auto;">' + report.fullReportText + '</pre>' +
+        '</div>';
     }
 
     modalContent.innerHTML = html;
@@ -901,6 +961,169 @@ function viewReport(id) {
 
 function closeModal() {
     document.getElementById('detail-modal').style.display = 'none';
+}
+
+/* Consolidated Report Modal */
+function openConsolidatedModal() {
+    document.getElementById('consolidated-modal').style.display = 'flex';
+    fetchAndGenerateConsolidatedReport();
+}
+
+function closeConsolidatedModal() {
+    document.getElementById('consolidated-modal').style.display = 'none';
+}
+
+async function fetchAndGenerateConsolidatedReport() {
+    const outputEl = document.getElementById('report-output');
+    const targetDateVal = document.getElementById('report-target-date').value;
+    const whatsappBtn = document.getElementById('whatsapp-share-btn');
+
+    if (!targetDateVal) {
+        outputEl.innerText = "Please select a valid date to generate the report.";
+        whatsappBtn.style.display = 'none';
+        return;
+    }
+
+    outputEl.innerText = "Fetching data for " + targetDateVal + "...";
+    whatsappBtn.style.display = 'none';
+
+    try {
+        const snapshot = await db.collection("reports").get();
+
+        if (snapshot.empty) {
+            outputEl.innerText = "No records found in Firestore database.";
+            return;
+        }
+
+        const hierarchy = {};
+        let totalFilteredDocs = 0;
+
+        snapshot.forEach(function(doc) {
+            const data = doc.data();
+
+            // STRICT FILTERING: Strict match on mode === 'visit'.
+            // Excludes non-visit entries (e.g. 'not visit', 'no visit', 'call', etc.)
+            const rawMode = data.mode ? String(data.mode).trim().toLowerCase() : '';
+            if (rawMode !== 'visit') {
+                return;
+            }
+
+            let recDateStr = null;
+            if (data.createdAt && data.createdAt.seconds) {
+                const dateObj = new Date(data.createdAt.seconds * 1000);
+                recDateStr = dateObj.toISOString().split('T')[0];
+            } else if (data.date) {
+                recDateStr = data.date;
+            }
+
+            if (recDateStr !== targetDateVal) {
+                return;
+            }
+
+            totalFilteredDocs++;
+
+            const slot = data.slot || "Unassigned Slot";
+            const canteen = data.canteenNumber || "Unknown Canteen";
+            const exceptions = data.exceptions || [];
+
+            if (!hierarchy[slot]) {
+                hierarchy[slot] = {};
+            }
+
+            exceptions.forEach(function(ex) {
+                const rawCategory = ex.category || "General";
+                const normCategory = normalizeCategory(rawCategory);
+                const issueKey = ex.item || "Unspecified Issue";
+                const remarkText = ex.remark || "No remark provided";
+
+                if (!hierarchy[slot][normCategory]) {
+                    hierarchy[slot][normCategory] = {};
+                }
+
+                if (!hierarchy[slot][normCategory][canteen]) {
+                    hierarchy[slot][normCategory][canteen] = [];
+                }
+
+                hierarchy[slot][normCategory][canteen].push({ issue: issueKey, remark: remarkText });
+            });
+        });
+
+        const formattedDisplayDate = getFormattedDateWithDay(targetDateVal);
+
+        let textReport = "📊 *CONSOLIDATED QC VISIT REPORT*\n";
+        textReport += "📅 *DATE:* " + formattedDisplayDate + "\n";
+        textReport += "📝 *TOTAL AUDITS ON THIS DAY:* " + totalFilteredDocs + "\n";
+        textReport += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n";
+
+        const sortedSlots = Object.keys(hierarchy).sort(function(a, b) {
+            let indexA = SLOT_HIERARCHY.indexOf(a);
+            let indexB = SLOT_HIERARCHY.indexOf(b);
+            if (indexA === -1) indexA = 99;
+            if (indexB === -1) indexB = 99;
+            return indexA - indexB;
+        });
+
+        if (sortedSlots.length === 0 || totalFilteredDocs === 0) {
+            textReport += "✅ No visits or exceptions reported for date: " + formattedDisplayDate + ".";
+        } else {
+            sortedSlots.forEach(function(slotName) {
+                textReport += "⏰ *SLOT: " + slotName.toUpperCase() + "*\n";
+                textReport += "====================================\n";
+
+                const categoriesObj = hierarchy[slotName];
+                const categories = Object.keys(categoriesObj);
+
+                if (categories.length === 0) {
+                    textReport += "  ✅ No issues recorded in this slot.\n\n";
+                    return;
+                }
+
+                categories.forEach(function(catName) {
+                    const canteensObj = categoriesObj[catName];
+                    
+                    let totalCategoryIssues = 0;
+                    Object.values(canteensObj).forEach(function(itemsList) {
+                        totalCategoryIssues += itemsList.length;
+                    });
+
+                    textReport += "\n📁 *CATEGORY: " + catName.toUpperCase() + " (" + totalCategoryIssues + ")*\n";
+                    textReport += "------------------------------------\n";
+
+                    Object.keys(canteensObj).sort().forEach(function(canteenNum) {
+                        textReport += "      🏬 *Canteen " + canteenNum + ":*\n";
+                        canteensObj[canteenNum].forEach(function(itemObj) {
+                            textReport += "          • " + itemObj.issue + " — 💬 " + itemObj.remark + "\n";
+                        });
+                    });
+                });
+
+                textReport += "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n";
+            });
+        }
+
+        outputEl.innerText = textReport;
+
+        whatsappBtn.href = "https://api.whatsapp.com/send?text=" + encodeURIComponent(textReport);
+        whatsappBtn.style.display = 'inline-flex';
+
+    } catch (err) {
+        console.error("Error generating consolidated report:", err);
+        outputEl.innerText = "Error fetching data: " + err.message;
+        whatsappBtn.style.display = 'none';
+    }
+}
+
+function copyConsolidatedReport() {
+    const text = document.getElementById('report-output').innerText;
+    if (!text || text.startsWith("Select") || text.startsWith("Fetching")) {
+        alert("Please generate the report before copying.");
+        return;
+    }
+    navigator.clipboard.writeText(text).then(function() {
+        alert("Consolidated report copied to clipboard!");
+    }).catch(function(err) {
+        alert("Failed to copy text: " + err);
+    });
 }
 
 function nextPage() { currentPage++; renderPaginatedView(); }
@@ -918,33 +1141,33 @@ function exportToCSV() {
     }
 
     const headers = ["Report ID", "Date & Time", "Canteen Number", "Sewadar Name", "DIC Name", "Exceptions Count", "Flagged Categories", "Category Remarks", "General Feedback"];
-    const rows = currentFilteredData.map(r => {
+    const rows = currentFilteredData.map(function(r) {
         const dateFormatted = r.createdAt 
-            ? `"${new Date(r.createdAt.seconds * 1000).toLocaleString('en-GB')}"` 
-            : '"N/A"';
+            ? '"' + new Date(r.createdAt.seconds * 1000).toLocaleString('en-GB') + '"' 
+            : '"' + (r.date || 'N/A') + '"';
 
         let flaggedCats = "";
         let remarksSummary = "";
 
         if (r.categorizedIssues) {
-            const failed = r.categorizedIssues.filter(c => c.issueCount > 0);
-            flaggedCats = failed.map(c => `${normalizeCategory(c.category)} (${c.issueCount})`).join("; ");
+            const failed = r.categorizedIssues.filter(function(c) { return c.issueCount > 0; });
+            flaggedCats = failed.map(function(c) { return normalizeCategory(c.category) + ' (' + c.issueCount + ')'; }).join("; ");
             remarksSummary = r.categorizedIssues
-                .filter(c => c.remarks)
-                .map(c => `${normalizeCategory(c.category)}: ${c.remarks}`)
+                .filter(function(c) { return c.remarks; })
+                .map(function(c) { return normalizeCategory(c.category) + ': ' + c.remarks; })
                 .join("; ");
         }
 
         return [
-            `"${r.id}"`,
+            '"' + r.id + '"',
             dateFormatted,
-            `"${(r.canteenNumber || '').toString().replace(/"/g, '""')}"`,
-            `"${(r.sewadarName || '').replace(/"/g, '""')}"`,
-            `"${(r.dicName || '').replace(/"/g, '""')}"`,
+            '"' + (r.canteenNumber || '').toString().replace(/"/g, '""') + '"',
+            '"' + (r.sewadarName || '').replace(/"/g, '""') + '"',
+            '"' + (r.dicName || '').replace(/"/g, '""') + '"',
             r.exceptionsCount || 0,
-            `"${flaggedCats.replace(/"/g, '""')}"`,
-            `"${remarksSummary.replace(/"/g, '""')}"`,
-            `"${(r.generalFeedback || '').replace(/"/g, '""')}"`
+            '"' + flaggedCats.replace(/"/g, '""') + '"',
+            '"' + remarksSummary.replace(/"/g, '""') + '"',
+            '"' + (r.generalFeedback || '').replace(/"/g, '""') + '"'
         ].join(",");
     });
 
@@ -955,7 +1178,7 @@ function exportToCSV() {
     
     const dateStamp = new Date().toISOString().slice(0, 10);
     link.setAttribute("href", url);
-    link.setAttribute("download", `QC_Inspection_Reports_${dateStamp}.csv`);
+    link.setAttribute("download", "QC_Inspection_Reports_" + dateStamp + ".csv");
     
     document.body.appendChild(link);
     link.click();
