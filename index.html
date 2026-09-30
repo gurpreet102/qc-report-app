@@ -678,19 +678,21 @@ const AUDIT_DATA = [
             { en: "Ensure all sewadars wear headcovers, aprons, and gloves.", hi: "सभी सेवादार सिर का कपड़ा, एप्रन और दस्ताने पहनें।" },
             { en: "Keep counters free of surplus coupons.", hi: "काउंटर पर अतिरिक्त कूपन न जमा न होने दें।" },
             { en: "Ensure coupons are torn properly.", hi: "कूपन सही तरीके से फाड़े जाएं।" },
-            { en: "Maintain courteous and respectful behavior toward the sangat.", hi: "संगत के साथ प्यार और आदर से बात करें।" }
+            { en: "Maintain courteous and respectful behavior toward the sangat.", hi: "संगत के साथ प्यार और आदर से बात करें।" },
+            ...(isVisitMode ? [{ en: "Counters from inside are clean and neatly stacked", hi: "काउंटर अंदर से साफ हैं और करीने से रखे गए हैं।" }] : [])
         ]
     },
     {
         category: { en: "Washing Area", hi: "बर्तन धुलाई की जगह (Washing Area)" },
         items: [
-            { en: "Ensure all utensils are fully dried before reuse.", hi: "दोबारा इस्तेमाल से पहले बर्तन पूरी तरह सूखे हों।" }
+            { en: "Ensure all utensils are fully dried before reuse.", hi: "दोबारा इस्तेमाल से पहले बर्तन पूरी तरह सूखे हों।" },
+            ...(isVisitMode ? [{ en: "Big utensils are cleaned regularly.", hi: "बड़े बर्तनों की सफाई नियमित रूप से की जाती है।" }] : [])
         ]
     },
     {
         category: { en: "Eating Area", hi: "खाने की जगह (Eating Area)" },
         items: [
-            { en: "Maintain orderly line management for smooth crowd flow.", hi: "भीड़ न हो, इसके लिए लाइन सही बनवाएं।" },
+            ...(!isVisitMode ? [{ en: "Maintain orderly line management for smooth crowd flow.", hi: "भीड़ न हो, इसके लिए लाइन सही बनवाएं।" }] : []),
             { en: "Ensure adequate supply and availability of extra utensils.", hi: "जरूरत के हिसाब से एक्स्ट्रा बर्तन मौजूद रहें।" },
             { en: "Keep all tables wiped and clean.", hi: "सभी tables पोंछकर साफ रखें।" },
             { en: "Ensure seating mats are available and neatly arranged.", hi: "बैठने की चटाइयां साफ और सही बिछी हों।" },
@@ -700,7 +702,14 @@ const AUDIT_DATA = [
         ]
     },
     ...(isVisitMode ? [{
-        category: { en: "Old Enclosure", hi: "ओल्ड एन्क्लोश़रा (Old Enclosure)" },
+        category: { en: "Security", hi: "सुरक्षा (Security)" },
+        items: [
+            { en: "Maintain orderly line management for smooth crowd flow.", hi: "भीड़ न हो, इसके लिए लाइन सही बनवाएं।" },
+            { en: "Sangat movement is properly managed by Security Sevadars", hi: "सुरक्षा सेवादारों द्वारा संगत की आवाजाही को उचित रूप से प्रबंधित किया जाता है।" }
+        ]
+    }] : []),
+    ...(isVisitMode ? [{
+        category: { en: "Old Enclosure", hi: "ओल्ड एन्क्लोश़र (Old Enclosure)" },
         items: [
             { en: "Enough seating space is available and properly arranged.", hi: "पर्याप्त बैठने की जगह उपलब्ध है और सही ढंग से व्यवस्थित है।" },
             { en: "No queue for seating, and elders are given seats without waiting.", hi: "बैठने के लिए कोई लाइन नहीं है, और बुजुर्गों को बिना इंतजार किए सीट दी जाती है।" },
@@ -736,7 +745,8 @@ const AUDIT_DATA = [
             { en: "Idli", hi: "इडली" },
             { en: "Sambar", hi: "सांभर" },
             { en: "Chutney", hi: "चटनी" },
-            { en: "Fruit", hi: "फल" }
+            { en: "Fruit", hi: "फल" },
+            ...(isVisitMode ? [{ en: "Frooti and Water Bottles (Chilled)", hi: "फ्रूटी और पानी की बोतलें (ठंडी)" }] : [])
         ]
     }
 ];
