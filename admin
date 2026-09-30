@@ -446,9 +446,28 @@
         </div>
         <div class="modal-body">
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap;">
-                <div style="display: flex; gap: 8px; align-items: center;">
-                    <label style="font-size: 0.85rem; font-weight: 700; color: var(--primary);">Select Date:</label>
-                    <input type="date" id="report-target-date" style="padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.85rem;" onchange="fetchAndGenerateConsolidatedReport()">
+                <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <label style="font-size: 0.85rem; font-weight: 700; color: var(--primary);">Select Date:</label>
+                        <input type="date" id="report-target-date" style="padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.85rem;" onchange="fetchAndGenerateConsolidatedReport()">
+                    </div>
+                    <!-- Shift/Slot Selection Filter -->
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <label style="font-size: 0.85rem; font-weight: 700; color: var(--primary);">Shift / Slot:</label>
+                        <select id="report-target-slot" style="padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.85rem;" onchange="fetchAndGenerateConsolidatedReport()">
+                            <option value="ALL">All Shifts</option>
+                            <option value="Pre-Satsang">Pre-Satsang</option>
+                            <option value="Post-Satsang">Post-Satsang</option>
+                            <option value="Evening">Evening</option>
+                        </select>
+                    </div>
+                    <!-- Added Canteen Selection Filter -->
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <label style="font-size: 0.85rem; font-weight: 700; color: var(--primary);">Canteen:</label>
+                        <select id="report-target-canteen" style="padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.85rem;" onchange="fetchAndGenerateConsolidatedReport()">
+                            <option value="ALL">All Canteens</option>
+                        </select>
+                    </div>
                 </div>
                 <div style="display: flex; gap: 8px;">
                     <button class="btn btn-refresh" onclick="fetchAndGenerateConsolidatedReport()">🔄 Generate Report</button>
@@ -498,7 +517,7 @@ const categoryMap = {
 };
 
 // Strict Slot Hierarchy
-const SLOT_HIERARCHY = ["Pre-Satsang", "Post-Satsang", "Evening Slot"];
+const SLOT_HIERARCHY = ["Pre-Satsang", "Post-Satsang", "Evening"];
 
 function normalizeCategory(catStr) {
     if (!catStr) return "Uncategorized";
@@ -558,6 +577,7 @@ function fetchReports() {
           });
 
           populateCategoryFilterDropdown();
+          populateCanteenModalDropdown();
           applyFilters();
       })
       .catch(function(error) {
@@ -582,6 +602,37 @@ function populateCategoryFilterDropdown() {
     categoriesSet.forEach(function(cat) {
         categorySelect.innerHTML += '<option value="' + cat + '">' + cat + '</option>';
     });
+}
+
+function populateCanteenModalDropdown() {
+    const canteenSelect = document.getElementById('report-target-canteen');
+    if (!canteenSelect) return;
+
+    const canteensSet = new Set();
+
+    allReports.forEach(function(r) {
+        if (r.canteenNumber !== undefined && r.canteenNumber !== null && r.canteenNumber !== '') {
+            canteensSet.add(r.canteenNumber.toString().trim());
+        }
+    });
+
+    const sortedCanteens = Array.from(canteensSet).sort(function(a, b) {
+        const numA = parseInt(a, 10);
+        const numB = parseInt(b, 10);
+        if (!isNaN(numA) && !isNaN(numB)) {
+            return numA - numB;
+        }
+        return a.localeCompare(b);
+    });
+
+    const currentSelected = canteenSelect.value || "ALL";
+    canteenSelect.innerHTML = '<option value="ALL">All Canteens</option>';
+    
+    sortedCanteens.forEach(function(canteen) {
+        canteenSelect.innerHTML += '<option value="' + canteen + '">Canteen ' + canteen + '</option>';
+    });
+
+    canteenSelect.value = canteensSet.has(currentSelected) ? currentSelected : "ALL";
 }
 
 function updateStatsAndVisuals(filteredData) {
@@ -965,6 +1016,7 @@ function closeModal() {
 
 /* Consolidated Report Modal */
 function openConsolidatedModal() {
+    populateCanteenModalDropdown();
     document.getElementById('consolidated-modal').style.display = 'flex';
     fetchAndGenerateConsolidatedReport();
 }
@@ -976,6 +1028,8 @@ function closeConsolidatedModal() {
 async function fetchAndGenerateConsolidatedReport() {
     const outputEl = document.getElementById('report-output');
     const targetDateVal = document.getElementById('report-target-date').value;
+    const targetSlotVal = document.getElementById('report-target-slot').value;
+    const targetCanteenVal = document.getElementById('report-target-canteen') ? document.getElementById('report-target-canteen').value : "ALL";
     const whatsappBtn = document.getElementById('whatsapp-share-btn');
 
     if (!targetDateVal) {
@@ -984,7 +1038,12 @@ async function fetchAndGenerateConsolidatedReport() {
         return;
     }
 
-    outputEl.innerText = "Fetching data for " + targetDateVal + "...";
+    let filterStatusMsg = "Fetching data for " + targetDateVal;
+    if (targetSlotVal !== "ALL") filterStatusMsg += " (" + targetSlotVal + ")";
+    if (targetCanteenVal !== "ALL") filterStatusMsg += " (Canteen " + targetCanteenVal + ")";
+    filterStatusMsg += "...";
+
+    outputEl.innerText = filterStatusMsg;
     whatsappBtn.style.display = 'none';
 
     try {
@@ -1002,7 +1061,6 @@ async function fetchAndGenerateConsolidatedReport() {
             const data = doc.data();
 
             // STRICT FILTERING: Strict match on mode === 'visit'.
-            // Excludes non-visit entries (e.g. 'not visit', 'no visit', 'call', etc.)
             const rawMode = data.mode ? String(data.mode).trim().toLowerCase() : '';
             if (rawMode !== 'visit') {
                 return;
@@ -1020,10 +1078,24 @@ async function fetchAndGenerateConsolidatedReport() {
                 return;
             }
 
+            const slot = data.slot || "Unassigned Slot";
+
+            // FILTER BY SHIFT / SLOT IF SELECTED
+            if (targetSlotVal !== "ALL" && slot.trim().toLowerCase() !== targetSlotVal.trim().toLowerCase()) {
+                return;
+            }
+
+            const canteen = (data.canteenNumber !== undefined && data.canteenNumber !== null && data.canteenNumber !== '') 
+                ? data.canteenNumber.toString().trim() 
+                : "Unknown Canteen";
+
+            // FILTER BY CANTEEN IF SELECTED
+            if (targetCanteenVal !== "ALL" && canteen.toLowerCase() !== targetCanteenVal.trim().toLowerCase()) {
+                return;
+            }
+
             totalFilteredDocs++;
 
-            const slot = data.slot || "Unassigned Slot";
-            const canteen = data.canteenNumber || "Unknown Canteen";
             const exceptions = data.exceptions || [];
 
             if (!hierarchy[slot]) {
@@ -1052,6 +1124,12 @@ async function fetchAndGenerateConsolidatedReport() {
 
         let textReport = "📊 *CONSOLIDATED QC VISIT REPORT*\n";
         textReport += "📅 *DATE:* " + formattedDisplayDate + "\n";
+        if (targetSlotVal !== "ALL") {
+            textReport += "⏰ *SHIFT:* " + targetSlotVal.toUpperCase() + "\n";
+        }
+        if (targetCanteenVal !== "ALL") {
+            textReport += "🏬 *CANTEEN:* " + targetCanteenVal + "\n";
+        }
         textReport += "📝 *TOTAL AUDITS ON THIS DAY:* " + totalFilteredDocs + "\n";
         textReport += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n";
 
@@ -1064,7 +1142,10 @@ async function fetchAndGenerateConsolidatedReport() {
         });
 
         if (sortedSlots.length === 0 || totalFilteredDocs === 0) {
-            textReport += "✅ No visits or exceptions reported for date: " + formattedDisplayDate + ".";
+            let noDataMsg = "✅ No visits or exceptions reported for date: " + formattedDisplayDate;
+            if (targetSlotVal !== "ALL") noDataMsg += " (" + targetSlotVal + ")";
+            if (targetCanteenVal !== "ALL") noDataMsg += " (Canteen " + targetCanteenVal + ")";
+            textReport += noDataMsg + ".";
         } else {
             sortedSlots.forEach(function(slotName) {
                 textReport += "⏰ *SLOT: " + slotName.toUpperCase() + "*\n";
